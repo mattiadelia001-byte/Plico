@@ -3,7 +3,7 @@ import { FilePlus2, FolderOpen, Lock, Merge } from "lucide-react";
 import { activeDoc, toast, useStore } from "./state/store";
 import * as act from "./state/actions";
 import * as platform from "./platform";
-import { isMac } from "./platform";
+import { isMac, isTauri } from "./platform";
 import { TopBar, useDocVersion } from "./components/TopBar";
 import { Sidebar } from "./components/Sidebar";
 import { MarkupBar } from "./components/MarkupBar";
@@ -57,11 +57,12 @@ export function App() {
   };
 
   return (
-    <div className={"app" + (isMac ? " mac" : "")}
+    <div className={"app" + (isMac ? " mac" : "") + (isMac && isTauri ? " overlay-title" : "")}
       onDragEnter={(e) => { if (hasFiles(e)) { counter.current++; setDragOver(true); } }}
       onDragLeave={(e) => { if (hasFiles(e) && --counter.current <= 0) setDragOver(false); }}
       onDragOver={(e) => { if (hasFiles(e)) e.preventDefault(); }}
       onDrop={onDrop}>
+      {isMac && isTauri && <div className="titlebar" data-tauri-drag-region><span>{doc?.name ?? "PDFolio"}</span></div>}
       <TopBar />
       {doc ? (
         <div className="workspace">

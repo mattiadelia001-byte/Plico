@@ -167,5 +167,25 @@ for (const rot of [0, 90, 180, 270]) {
 const blank = PDFolioDoc.blank();
 ok(blank.pageCount === 1 && blank.size(0)[1] === 842, "documento nuovo A4");
 
+// ricerca: maiuscole, minuscole e accenti non contano
+{
+  const m = await import("mupdf");
+  const d = new m.PDFDocument();
+  const font = d.addSimpleFont(new m.Font("Helvetica"));
+  const add = (text: string) => {
+    const r = d.newDictionary(), f = d.newDictionary();
+    f.put("F1", font); r.put("Font", f);
+    d.insertPage(-1, d.addPage([0, 0, 595, 842], 0, r, `BT /F1 14 Tf 72 700 Td (${text}) Tj ET`));
+  };
+  add("Alimento alimento ALIMENTO AliMento citta");
+  add("Secondo: l ALIMENTO sano");
+  const sd = PDFolioDoc.open(d.saveToBuffer("").asUint8Array().slice(), "ricerca.pdf");
+  for (const q of ["alimento", "Alimento", "ALIMENTO", "aLiMeNtO"]) ok(sd.search(q).length === 5, `ricerca “${q}” trova tutte le varianti`);
+  ok(sd.search("città").length === 1 && sd.search("CITTÀ").length === 1, "ricerca senza accenti");
+  ok(sd.search("secondo: l alimento").length === 1, "ricerca di una frase");
+  ok(sd.search("zzz").length === 0 && sd.search("  ").length === 0, "nessun risultato");
+  ok(sd.search("alimento")[4].page === 1, "pagina del risultato");
+}
+
 console.log(fails === 0 ? "TUTTI I TEST SUPERATI" : fails + " TEST FALLITI");
 process.exit(fails ? 1 : 0);

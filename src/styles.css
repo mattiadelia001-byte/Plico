@@ -53,6 +53,9 @@ button { cursor: default; }
 /* ---------- barra in alto ---------- */
 .topbar { background: var(--panel); border-bottom: 1px solid var(--border); flex: none; }
 .app.mac .topbar { padding-top: 0; }
+/* su Mac la barra del sistema è trasparente: il nome sta al centro, accanto ai tre pulsanti */
+.titlebar { height: 38px; flex: none; display: flex; align-items: center; justify-content: center; padding: 0 84px; background: var(--panel); border-bottom: 1px solid var(--border); font-weight: 600; font-size: 13px; user-select: none; -webkit-user-select: none; }
+.titlebar span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; pointer-events: none; }
 .tabs { display: flex; align-items: flex-end; gap: 2px; padding: 6px 8px 0; background: var(--panel-2); border-bottom: 1px solid var(--border); overflow-x: auto; }
 .tab { display: flex; align-items: center; gap: 6px; max-width: 220px; padding: 6px 8px 6px 10px; border-radius: 8px 8px 0 0; color: var(--muted); border: 1px solid transparent; border-bottom: none; }
 .tab:hover { background: var(--hover); }
@@ -137,15 +140,16 @@ button { cursor: default; }
 .empty { padding: 30px 18px; text-align: center; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .outline { overflow: auto; padding: 4px 4px 14px; }
 .outline ul, .annot-list, .results ul { list-style: none; margin: 0; padding: 0; }
-.outline button, .annot-list button, .results button { width: 100%; text-align: left; border: none; background: transparent; border-radius: 6px; padding: 5px 8px; }
-.outline button:hover, .annot-list button:hover, .results button:hover { background: var(--hover); }
+.outline button, .annot-list button, .results li button { display: block; width: 100%; text-align: left; border: none; background: transparent; border-radius: 6px; padding: 5px 8px; }
+.outline button:hover, .annot-list button:hover, .results li button:hover { background: var(--hover); }
 .annot-list, .results { overflow: auto; padding: 4px; flex: 1; }
 .annot-list button { display: flex; align-items: center; gap: 8px; }
-.annot-list button.on, .results button.on { background: var(--accent-soft); }
+.annot-list button.on, .results li button.on { background: var(--accent-soft); }
 .annot-list small, .results small { display: block; color: var(--muted); font-size: 11px; }
 .annot-list .dot { width: 10px; height: 10px; border-radius: 50%; flex: none; border: 1px solid rgba(128, 128, 128, 0.5); }
 .results-head { display: flex; align-items: center; gap: 4px; padding: 2px 12px 6px; color: var(--muted); font-size: 12px; }
-.results-head span { flex: 1; }
+.results-head span { flex: 1; white-space: nowrap; }
+.results-head .mini { flex: none; width: 24px; height: 24px; }
 .results { display: flex; flex-direction: column; min-height: 0; }
 .results ul { overflow: auto; }
 
@@ -165,7 +169,7 @@ button:disabled { opacity: 0.45; }
 button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.primary:hover:not(:disabled) { background: var(--accent); border-color: var(--accent); color: #fff; filter: brightness(1.12); }
 button.primary:active:not(:disabled) { filter: brightness(0.92); }
-.menu-btn, .icon-btn, .tab-close, .tab-new, .mini, .seg button, .outline button, .annot-list button, .results button, .menu-item, .swatch { border-width: 0; }
+.menu-btn, .icon-btn, .tab-close, .tab-new, .mini, .seg button, .outline button, .annot-list button, .results li button, .menu-item, .swatch { border-width: 0; }
 .swatch { border-width: 1px; }
 .text, .field input, select, .num { border: 1px solid var(--border); background: var(--panel); border-radius: 6px; padding: 5px 8px; outline: none; user-select: text; width: 100%; }
 .text:focus, .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }

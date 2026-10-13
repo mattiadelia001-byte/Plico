@@ -6,6 +6,10 @@ export interface TLine { chars: Ch[]; x0: number; x1: number; y0: number; y1: nu
 /** Posizione tra due caratteri: `ch` è l'indice di inserimento (0..lunghezza). */
 export interface Pos { line: number; ch: number }
 export interface Range { quads: Quad[]; text: string }
+export interface Match { quads: Quad[]; snippet: string }
+
+/** Forma “neutra” di un carattere per la ricerca: senza maiuscole né accenti (ﬁ → fi, è → e). */
+const fold = (c: string) => c.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
 
 const isSpace = (c: string) => /\s/.test(c);
 const cmp = (a: Pos, b: Pos) => (a.line !== b.line ? a.line - b.line : a.ch - b.ch);
@@ -41,6 +45,39 @@ export class TextModel {
   }
 
   get empty() { return this.lines.length === 0; }
+
+  /** Cerca ignorando maiuscole, minuscole e accenti; spazi e a capo contano come un solo spazio. */
+  search(query: string, limit = Infinity): Match[] {
+    const q = Array.from(query.trim()).map((c) => (isSpace(c) ? " " : fold(c))).join("").replace(/ +/g, " ");
+    if (!q) return [];
+    let text = "";
+    const at: Pos[] = [];
+    this.lines.forEach((l, li) => {
+      l.chars.forEach((k, ci) => {
+        const f = isSpace(k.c) ? " " : fold(k.c);
+        if (f === " " && text.endsWith(" ")) return;
+        for (const _ of f) at.push({ line: li, ch: ci });
+        text += f;
+      });
+      if (!text.endsWith(" ")) { text += " "; at.push({ line: li, ch: l.chars.length }); }
+    });
+    const out: Match[] = [];
+    for (let i = text.indexOf(q); i >= 0 && out.length < limit; i = text.indexOf(q, i + q.length)) {
+      const a = at[i], b = at[i + q.length - 1];
+      const r = this.range(a, { line: b.line, ch: b.ch + 1 });
+      if (r.quads.length) out.push({ quads: r.quads, snippet: this.snippet(a) });
+    }
+    return out;
+  }
+
+  /** Riga che contiene la posizione, accorciata attorno ad essa se è lunga. */
+  private snippet(p: Pos): string {
+    const chars = this.lines[p.line].chars;
+    const raw = chars.map((k) => k.c).join("");
+    const start = Math.max(0, p.ch - 20);
+    const piece = raw.slice(start, start + 120).replace(/\s+/g, " ").trim();
+    return (start > 0 ? "…" : "") + piece + (start + 120 < raw.length ? "…" : "");
+  }
 
   /** Posizione di inserimento più vicina al punto (coordinate pagina). */
   locate(x: number, y: number): Pos | null {

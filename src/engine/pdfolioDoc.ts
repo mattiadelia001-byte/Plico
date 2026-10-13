@@ -318,16 +318,9 @@ export class PDFolioDoc {
 
   search(query: string, limit = 500): SearchHit[] {
     const hits: SearchHit[] = [];
-    const q = query.trim();
-    if (!q) return hits;
+    if (!query.trim()) return hits;
     for (let i = 0; i < this.pageCount && hits.length < limit; i++) {
-      const results = this.page(i).search(q, {});
-      if (!results.length) continue;
-      const st = this.stext(i);
-      for (const quads of results) {
-        if (hits.length >= limit) break;
-        hits.push({ page: i, quads, snippet: snippetAround(st, quads) });
-      }
+      for (const m of this.textModel(i).search(query, limit - hits.length)) hits.push({ page: i, ...m });
     }
     return hits;
   }
@@ -347,19 +340,6 @@ export class PDFolioDoc {
     this.dirty = false;
     this.version++;
     this.notify();
-  }
-}
-
-function snippetAround(st: mupdf.StructuredText, quads: Quad[]): string {
-  const q = quads[0];
-  if (!q) return "";
-  const ys = [q[1], q[3], q[5], q[7]];
-  const midY = (Math.min(...ys) + Math.max(...ys)) / 2;
-  try {
-    const line = st.copy([0, midY], [100000, midY]).trim().replace(/\s+/g, " ");
-    return line.length > 120 ? line.slice(0, 120) + "…" : line;
-  } catch {
-    return "";
   }
 }
 
