@@ -66,7 +66,7 @@ interface State {
 }
 
 const loadSignatures = (): Signature[] => {
-  try { return JSON.parse(localStorage.getItem("folio.signatures") ?? "[]"); } catch { return []; }
+  try { return JSON.parse((localStorage.getItem("plico.signatures") ?? localStorage.getItem("folio.signatures") ?? "[]")); } catch { return []; }
 };
 
 export const useStore = create<State>((set, get) => ({
@@ -120,7 +120,7 @@ export const activeDoc = (s: { docs: PlicoDoc[]; activeId: string | null }) =>
   s.docs.find((d) => d.id === s.activeId) ?? null;
 
 export function saveSignatures(list: Signature[], selected: string | null) {
-  localStorage.setItem("folio.signatures", JSON.stringify(list));
+  localStorage.setItem("plico.signatures", JSON.stringify(list));
   useStore.getState().patch({ signatures: list, signatureId: selected });
 }
 

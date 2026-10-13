@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import * as mupdf from "/Users/mattiadelia/Developer/folio-desktop/node_modules/mupdf/dist/mupdf.js";
+const mupdf = await import(new URL("../../node_modules/mupdf/dist/mupdf.js", import.meta.url).href);
 import { launch, openPdf, ok, done, shot, PDF, SAMPLE } from "./lib.mjs";
 
 const { browser, page, errors } = await launch();
