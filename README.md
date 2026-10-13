@@ -9,6 +9,13 @@ Un lettore ed editor di PDF leggero, per Mac e Windows.
 
 </div>
 
+<p align="center">
+  <a href="https://plico-silk.vercel.app"><strong>Sito</strong></a> ·
+  <a href="https://github.com/mattiadelia001-byte/Plico/releases/latest/download/Plico-mac.dmg">Scarica per Mac</a> ·
+  <a href="https://github.com/mattiadelia001-byte/Plico/releases/latest/download/Plico-windows-setup.exe">Scarica per Windows</a> ·
+  <a href="https://github.com/mattiadelia001-byte/Plico/releases">Tutte le versioni</a>
+</p>
+
 ---
 
 Plico è un'app per lavorare sui PDF senza complicazioni: li apri, li leggi, ci scrivi sopra, ne unisci o
