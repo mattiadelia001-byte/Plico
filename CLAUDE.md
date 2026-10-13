@@ -34,7 +34,7 @@ Non creare altre copie di `Plico.app` fuori da `/Applications` e da `src-tauri/t
 
 ## Cose da sapere
 
-- Windows non è mai stato compilato né provato (nessun PC Windows). C'è `.github/workflows/build.yml`; il progetto è su GitHub: https://github.com/mattiadelia001-byte/PDFolio (il repository ha ancora il vecchio nome PDFolio, da rinominare su GitHub).
+- Windows non è mai stato compilato né provato (nessun PC Windows). C'è `.github/workflows/build.yml`; il progetto è su GitHub: https://github.com/mattiadelia001-byte/Plico.
 - MuPDF ha licenza AGPL: va ricordato se Mattia distribuisce l'app.
 - Le evidenziazioni hanno un aspetto scritto a mano (`squareHighlight`): va richiamato dopo ogni `update()` di MuPDF, che altrimenti torna all'aspetto tondo di serie.
 - In un PointerEvent `detail` vale sempre 0: i doppi clic si contano a mano.
