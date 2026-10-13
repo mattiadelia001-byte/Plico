@@ -53,7 +53,7 @@ export function TopBar() {
     { label: "Come immagini…", onClick: () => s.patch({ dialog: "images" }) },
     { label: "Dividi in più file…", onClick: () => s.patch({ dialog: "split" }) },
     { separator: true },
-    { label: "Riduci dimensioni…", onClick: () => s.patch({ dialog: "compress" }) },
+    { label: "Comprimi…", onClick: () => s.patch({ dialog: "compress" }) },
     { label: "Copia con password…", onClick: () => s.patch({ dialog: "protect" }) },
     { separator: true },
     { label: "Proprietà documento…", shortcut: `${mod}I`, onClick: () => s.patch({ dialog: "info" }) },

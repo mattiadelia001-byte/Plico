@@ -16,10 +16,10 @@ export function Dialogs() {
   const close = () => patch({ dialog: null });
   if (dialog === "merge") return <MergeDialog onClose={close} />;
   if (dialog === "signature") return <SignatureDialog onClose={close} />;
+  if (dialog === "compress") return <CompressDialog doc={doc} onClose={close} />;
   if (!doc) return null;
   switch (dialog) {
     case "split": return <SplitDialog doc={doc} onClose={close} />;
-    case "compress": return <CompressDialog doc={doc} onClose={close} />;
     case "protect": return <ProtectDialog doc={doc} onClose={close} />;
     case "info": return <InfoDialog doc={doc} onClose={close} />;
     case "images": return <ImagesDialog doc={doc} onClose={close} />;
@@ -73,28 +73,58 @@ function SplitDialog({ doc, onClose }: { doc: PlicoDoc; onClose: () => void }) {
 
 // ---------- Riduci dimensioni ----------
 
-function CompressDialog({ doc, onClose }: { doc: PlicoDoc; onClose: () => void }) {
+interface CompressSource { name: string; size: number; pdf: ReturnType<typeof T.openPdf> }
+
+/** Con un PDF aperto comprime quello; dalla home chiede di scegliere un file. */
+function CompressDialog({ doc, onClose }: { doc: PlicoDoc | null; onClose: () => void }) {
   const [preset, setPreset] = useState<T.CompressionPreset["id"]>("media");
+  const [picked, setPicked] = useState<CompressSource | null>(null);
+  const [over, setOver] = useState(false);
   const [progress, setProgress] = useState<[number, number] | null>(null);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
 
-  const run = async () => {
+  const pick = (f?: platform.PickedFile) => {
+    if (!f) return;
     setError(""); setResult("");
     try {
-      const original = doc.toBytes().length;
+      const pdf = T.openPdf(f.bytes);
+      if (pdf.needsPassword()) { setError(`“${f.name}” è protetto da password: aprilo prima e inserisci la password.`); return; }
+      setPicked({ name: f.name, size: f.bytes.length, pdf });
+    } catch { setError(`“${f.name}” non è un PDF valido.`); }
+  };
+
+  const source: { name: string; pdf: CompressSource["pdf"]; size: () => number } | null =
+    doc ? { name: doc.name, pdf: doc.pdf, size: () => doc.toBytes().length }
+    : picked ? { name: picked.name, pdf: picked.pdf, size: () => picked.size } : null;
+
+  const run = async () => {
+    if (!source) return;
+    setError(""); setResult("");
+    try {
+      const original = source.size();
       const p = T.PRESETS.find((x) => x.id === preset)!;
       setProgress([0, 1]);
-      const bytes = await T.compress(doc, p, (d, t) => setProgress([d, t]));
+      const bytes = await T.compress(source, p, (d, t) => setProgress([d, t]));
       setProgress(null);
-      const saved = await platform.saveAs(bytes, `${act.stripPdf(doc.name)} – ridotto.pdf`);
+      const saved = await platform.saveAs(bytes, `${act.stripPdf(source.name)} – compresso.pdf`);
       if (saved) setResult(`Fatto: da ${fmt(original)} a ${fmt(bytes.length)}.`);
     } catch (e) { setProgress(null); setError((e as Error).message); }
   };
 
   return (
-    <Modal title="Riduci dimensioni" onClose={onClose}>
-      <p className="muted">Crea una copia più leggera ricomprimendo le immagini. Il testo resta selezionabile e ricercabile, e il documento aperto non cambia.</p>
+    <Modal title="Comprimi" onClose={onClose}>
+      <p className="muted">Crea una copia più leggera ricomprimendo le immagini. Il testo resta selezionabile e ricercabile, e il file originale non cambia.</p>
+      {!doc && (
+        <div className={"dropzone" + (over ? " over" : "")} style={{ minHeight: 110, marginBottom: 12 }}
+          onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
+          onDrop={async (e) => { e.preventDefault(); setOver(false); const f = Array.from(e.dataTransfer.files).find((x) => /\.pdf$/i.test(x.name)); if (f) pick(await platform.fromFile(f)); }}>
+          <div className="dz-empty">
+            {picked ? <p><strong>{picked.name}</strong> · {fmt(picked.size)}</p> : <><FilePlus2 size={28} /><p>Trascina qui il PDF da comprimere</p></>}
+            <button onClick={async () => pick((await platform.pickPdfs(false))[0])} data-testid="compress-pick">{picked ? "Scegli un altro file…" : "Scegli il file…"}</button>
+          </div>
+        </div>
+      )}
       {T.PRESETS.map((p) => (
         <label key={p.id} className="radio block"><input type="radio" checked={preset === p.id} onChange={() => setPreset(p.id)} />
           <span><strong>{p.label}</strong><small>{p.description}</small></span></label>
@@ -102,7 +132,7 @@ function CompressDialog({ doc, onClose }: { doc: PlicoDoc; onClose: () => void }
       {progress && <progress value={progress[0]} max={progress[1]} />}
       {result && <p className="ok" data-testid="compress-result">{result}</p>}
       {error && <p className="error">{error}</p>}
-      <Footer><button onClick={onClose}>{result ? "Chiudi" : "Annulla"}</button><button className="primary" disabled={!!progress} onClick={run} data-testid="compress-run">Crea copia…</button></Footer>
+      <Footer><button onClick={onClose}>{result ? "Chiudi" : "Annulla"}</button><button className="primary" disabled={!!progress || !source} onClick={run} data-testid="compress-run">Crea copia…</button></Footer>
     </Modal>
   );
 }

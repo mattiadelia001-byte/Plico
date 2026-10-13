@@ -94,7 +94,7 @@ export const PRESETS: CompressionPreset[] = [
  * Riduce le dimensioni ricomprimendo le immagini. Il testo resta testo (selezionabile e ricercabile).
  * Lavora su una copia: il documento aperto non cambia.
  */
-export async function compress(doc: PlicoDoc, preset: CompressionPreset, onProgress?: Progress): Promise<Uint8Array> {
+export async function compress(doc: { pdf: mupdf.PDFDocument }, preset: CompressionPreset, onProgress?: Progress): Promise<Uint8Array> {
   const pdf = openPdf(toBytes(doc.pdf, ""));
   const n = pdf.countObjects();
 

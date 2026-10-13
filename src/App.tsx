@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
-import { FilePlus2, FolderOpen, Lock, Merge } from "lucide-react";
+import { FilePlus2, FolderOpen, Lock, Merge, Minimize2 } from "lucide-react";
 import { activeDoc, toast, useStore } from "./state/store";
 import * as act from "./state/actions";
 import * as platform from "./platform";
@@ -94,6 +94,7 @@ function Welcome() {
       <div className="welcome-actions">
         <button className="primary" onClick={act.openDialog} data-testid="welcome-open"><FolderOpen size={17} /> Apri un PDF</button>
         <button onClick={() => patch({ dialog: "merge" })}><Merge size={17} /> Unisci PDF</button>
+        <button onClick={() => patch({ dialog: "compress" })} data-testid="welcome-compress"><Minimize2 size={17} /> Comprimi PDF</button>
         <button onClick={act.newDocument}><FilePlus2 size={17} /> Nuovo documento</button>
       </div>
       <small>Oppure trascina qui un file.</small>
