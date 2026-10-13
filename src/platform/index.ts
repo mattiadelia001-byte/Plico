@@ -139,7 +139,7 @@ export function download(bytes: Uint8Array, name: string, type: string) {
 export async function confirmDialog(message: string, okLabel = "OK", cancelLabel = "Annulla"): Promise<boolean> {
   if (isTauri) {
     const { ask } = await import("@tauri-apps/plugin-dialog");
-    return ask(message, { title: "PDFolio", kind: "warning", okLabel, cancelLabel });
+    return ask(message, { title: "Plico", kind: "warning", okLabel, cancelLabel });
   }
   return window.confirm(message);
 }
@@ -149,7 +149,7 @@ export async function askSave(name: string): Promise<"save" | "discard" | "cance
   if (isTauri) {
     const { message } = await import("@tauri-apps/plugin-dialog");
     const res = await message(`Vuoi salvare le modifiche a “${name}” prima di chiuderlo?`, {
-      title: "PDFolio",
+      title: "Plico",
       kind: "warning",
       buttons: { yes: "Salva", no: "Non salvare", cancel: "Annulla" },
     } as any);

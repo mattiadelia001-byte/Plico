@@ -21,7 +21,7 @@ export interface SearchHit {
 }
 
 /** Un documento PDF aperto: contiene il motore MuPDF e tutta la logica di modifica. */
-export class PDFolioDoc {
+export class PlicoDoc {
   readonly id = uid();
   name: string;
   path: string | null;
@@ -48,18 +48,18 @@ export class PDFolioDoc {
     if (!this.locked) this.pdf.enableJournal();
   }
 
-  static open(bytes: Uint8Array, name: string, path: string | null = null): PDFolioDoc {
+  static open(bytes: Uint8Array, name: string, path: string | null = null): PlicoDoc {
     const doc = mupdf.Document.openDocument(bytes, "application/pdf");
     const pdf = doc.asPDF();
     if (!pdf) throw new Error("Il file non è un PDF valido.");
-    return new PDFolioDoc(pdf, name, path);
+    return new PlicoDoc(pdf, name, path);
   }
 
-  static blank(name = "Senza titolo"): PDFolioDoc {
+  static blank(name = "Senza titolo"): PlicoDoc {
     const pdf = new mupdf.PDFDocument();
     const page = pdf.addPage([0, 0, 595, 842], 0, {}, "");
     pdf.insertPage(-1, page);
-    const d = new PDFolioDoc(pdf, name, null);
+    const d = new PlicoDoc(pdf, name, null);
     return d;
   }
 

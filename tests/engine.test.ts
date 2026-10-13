@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { PDFolioDoc, graftPage } from "../src/engine/pdfolioDoc";
+import { PlicoDoc, graftPage } from "../src/engine/plicoDoc";
 import * as A from "../src/engine/annotations";
 import * as T from "../src/engine/tools";
 
@@ -12,7 +12,7 @@ let fails = 0;
 const ok = (c: boolean, m: string) => { console.log(c ? "PASS" : "FAIL", m); if (!c) fails++; };
 const load = (p: string) => new Uint8Array(fs.readFileSync(p));
 
-const doc = PDFolioDoc.open(load(S + "/real.pdf"), "real.pdf");
+const doc = PlicoDoc.open(load(S + "/real.pdf"), "real.pdf");
 ok(doc.pageCount === 3, "apre il documento (3 pagine)");
 ok(doc.size(0)[0] === 595, "dimensioni pagina");
 const img = doc.render(0, 2);
@@ -53,7 +53,7 @@ ok(hlQuad[5] - hlQuad[1] < fullH * 0.92, "la barra è più bassa del riquadro de
 const sq = A.createShape(doc, 0, "Square", [100, 300, 220, 380], style);
 const ln = A.createLine(doc, 0, [100, 420], [260, 480], true, style);
 const ink = A.createInk(doc, 0, [[[300, 300], [340, 340], [380, 300]]], style);
-const ft = A.createFreeText(doc, 0, [300, 420], "Ciao PDFolio", style);
+const ft = A.createFreeText(doc, 0, [300, 420], "Ciao Plico", style);
 const nt = A.createNote(doc, 0, [450, 120], "Una nota", "#ffcc00");
 let list = A.listAnnotations(doc, 0);
 ok(list.length === 6, "crea 6 annotazioni (" + list.map((l) => l.ref.type).join(",") + ")");
@@ -93,14 +93,14 @@ ok(A.listAnnotations(doc, 0).length === 7, "inserisce firma");
 
 // salvataggio e riapertura
 const saved = doc.toBytes();
-const re = PDFolioDoc.open(saved, "saved.pdf");
+const re = PlicoDoc.open(saved, "saved.pdf");
 ok(A.listAnnotations(re, 0).length === 7, "le annotazioni sopravvivono al salvataggio e alla riapertura");
 
 // duplicazione e unione mantengono le annotazioni
 doc.duplicatePages([0]);
 ok(doc.pageCount === 4 && A.listAnnotations(doc, 1).length === 7, "duplica pagina con annotazioni (" + A.listAnnotations(doc, 1).length + ")");
 doc.undo();
-const merged = PDFolioDoc.open(await T.merge([{ pdf: re.pdf }, { pdf: PDFolioDoc.open(load(S + "/real.pdf"), "x").pdf }]), "merged");
+const merged = PlicoDoc.open(await T.merge([{ pdf: re.pdf }, { pdf: PlicoDoc.open(load(S + "/real.pdf"), "x").pdf }]), "merged");
 ok(merged.pageCount === 6 && A.listAnnotations(merged, 0).length === 7, "unisce due PDF mantenendo le annotazioni");
 
 // inserimento PDF e riordino
@@ -119,26 +119,26 @@ ok(doc.stext(0).asText().trim().slice(0, 10) === t0, "annulla riordino");
 ok(JSON.stringify(T.parseRanges("1-2, 3", 3)) === "[[0,1],[2]]", "intervalli validi");
 ok(T.parseRanges("1-9", 3) === null && T.parseRanges("abc", 3) === null, "intervalli non validi");
 ok(T.splitGroups("every", 5, 2, "")!.length === 3, "dividi ogni 2 pagine");
-const ex = PDFolioDoc.open(T.extractPages(doc, [0, 2]), "ex");
+const ex = PlicoDoc.open(T.extractPages(doc, [0, 2]), "ex");
 ok(ex.pageCount === 2, "estrae pagine");
 
 // compressione
-const big = PDFolioDoc.open(load(S + "/t/sample.pdf"), "sample.pdf");
+const big = PlicoDoc.open(load(S + "/t/sample.pdf"), "sample.pdf");
 for (const p of T.PRESETS) {
   const out = await T.compress(big, p);
-  const chk = PDFolioDoc.open(out, "c");
+  const chk = PlicoDoc.open(out, "c");
   ok(out.length < 7691882 / 2 && chk.stext(0).asText().includes("Hello"), "compressione '" + p.label + "': " + (out.length / 1024).toFixed(0) + " KB, testo mantenuto");
 }
 
 // password
-const prot = PDFolioDoc.open(T.protect(doc, "segreto"), "p");
+const prot = PlicoDoc.open(T.protect(doc, "segreto"), "p");
 ok(prot.locked && prot.pageCount === 0, "copia protetta chiede la password");
 ok(!prot.unlock("sbagliata") && prot.locked, "password errata rifiutata");
 ok(prot.unlock("segreto") && prot.pageCount === 3, "password giusta sblocca");
 
 // metadati
 doc.setMeta({ "info:Title": "Titolo di prova", "info:Author": "Mattia" });
-ok(PDFolioDoc.open(doc.toBytes(), "m").getMeta("info:Title") === "Titolo di prova", "metadati salvati");
+ok(PlicoDoc.open(doc.toBytes(), "m").getMeta("info:Title") === "Titolo di prova", "metadati salvati");
 
 // immagini
 let count = 0;
@@ -147,7 +147,7 @@ ok(count === 2, "esporta immagini");
 
 // ritaglio: la zona scelta deve coincidere con quella che resta, anche con pagina ruotata o già ritagliata
 for (const rot of [0, 90, 180, 270]) {
-  const d = PDFolioDoc.open(load(S + "/real.pdf"), "crop.pdf");
+  const d = PlicoDoc.open(load(S + "/real.pdf"), "crop.pdf");
   if (rot) d.rotate([0], rot);
   const full = d.render(0, 1);
   const same = (a: ImageData, b: ImageData, ox: number, oy: number) => {
@@ -164,7 +164,7 @@ for (const rot of [0, 90, 180, 270]) {
 }
 
 // documento nuovo
-const blank = PDFolioDoc.blank();
+const blank = PlicoDoc.blank();
 ok(blank.pageCount === 1 && blank.size(0)[1] === 842, "documento nuovo A4");
 
 // ricerca: maiuscole, minuscole e accenti non contano
@@ -179,7 +179,7 @@ ok(blank.pageCount === 1 && blank.size(0)[1] === 842, "documento nuovo A4");
   };
   add("Alimento alimento ALIMENTO AliMento citta");
   add("Secondo: l ALIMENTO sano");
-  const sd = PDFolioDoc.open(d.saveToBuffer("").asUint8Array().slice(), "ricerca.pdf");
+  const sd = PlicoDoc.open(d.saveToBuffer("").asUint8Array().slice(), "ricerca.pdf");
   for (const q of ["alimento", "Alimento", "ALIMENTO", "aLiMeNtO"]) ok(sd.search(q).length === 5, `ricerca “${q}” trova tutte le varianti`);
   ok(sd.search("città").length === 1 && sd.search("CITTÀ").length === 1, "ricerca senza accenti");
   ok(sd.search("secondo: l alimento").length === 1, "ricerca di una frase");

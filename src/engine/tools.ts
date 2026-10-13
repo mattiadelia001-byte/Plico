@@ -1,5 +1,5 @@
 import * as mupdf from "mupdf";
-import { PDFolioDoc, graftPage } from "./pdfolioDoc";
+import { PlicoDoc, graftPage } from "./plicoDoc";
 
 const tick = () => new Promise<void>((r) => setTimeout(r, 0));
 
@@ -39,7 +39,7 @@ export async function merge(sources: MergeSource[], onProgress?: Progress): Prom
 }
 
 /** Estrae le pagine indicate in un nuovo PDF. */
-export function extractPages(doc: PDFolioDoc, pages: number[]): Uint8Array {
+export function extractPages(doc: PlicoDoc, pages: number[]): Uint8Array {
   const out = new mupdf.PDFDocument();
   for (const i of pages) graftPage(out, -1, doc.pdf, i);
   return toBytes(out);
@@ -94,7 +94,7 @@ export const PRESETS: CompressionPreset[] = [
  * Riduce le dimensioni ricomprimendo le immagini. Il testo resta testo (selezionabile e ricercabile).
  * Lavora su una copia: il documento aperto non cambia.
  */
-export async function compress(doc: PDFolioDoc, preset: CompressionPreset, onProgress?: Progress): Promise<Uint8Array> {
+export async function compress(doc: PlicoDoc, preset: CompressionPreset, onProgress?: Progress): Promise<Uint8Array> {
   const pdf = openPdf(toBytes(doc.pdf, ""));
   const n = pdf.countObjects();
 
@@ -162,7 +162,7 @@ function recompressImage(pdf: mupdf.PDFDocument, ref: mupdf.PDFObject, preset: C
 }
 
 /** Copia cifrata (AES-256) con password di apertura. */
-export function protect(doc: PDFolioDoc, userPassword: string, ownerPassword?: string): Uint8Array {
+export function protect(doc: PlicoDoc, userPassword: string, ownerPassword?: string): Uint8Array {
   const owner = ownerPassword || userPassword;
   return toBytes(doc.pdf, `encrypt=aes-256,user-password=${userPassword},owner-password=${owner},compress=yes,garbage=compact`);
 }
@@ -170,7 +170,7 @@ export function protect(doc: PDFolioDoc, userPassword: string, ownerPassword?: s
 export type ImageFormat = "png" | "jpeg";
 
 export async function* renderImages(
-  doc: PDFolioDoc,
+  doc: PlicoDoc,
   pages: number[],
   format: ImageFormat,
   dpi: number,

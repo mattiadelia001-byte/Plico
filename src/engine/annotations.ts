@@ -1,5 +1,5 @@
 import * as mupdf from "mupdf";
-import type { PDFolioDoc, Point, Quad, Rect } from "./pdfolioDoc";
+import type { PlicoDoc, Point, Quad, Rect } from "./plicoDoc";
 
 export type RGB = [number, number, number];
 
@@ -80,7 +80,7 @@ export function describe(a: mupdf.PDFAnnotation, page: number): AnnotRef {
   return { id: objId(a), page, type, bounds: a.getBounds(), contents, color, width, fontSize };
 }
 
-export function listAnnotations(doc: PDFolioDoc, page: number): { ref: AnnotRef; annot: mupdf.PDFAnnotation }[] {
+export function listAnnotations(doc: PlicoDoc, page: number): { ref: AnnotRef; annot: mupdf.PDFAnnotation }[] {
   return doc
     .page(page)
     .getAnnotations()
@@ -88,12 +88,12 @@ export function listAnnotations(doc: PDFolioDoc, page: number): { ref: AnnotRef;
     .map((annot) => ({ ref: describe(annot, page), annot }));
 }
 
-export function findAnnotation(doc: PDFolioDoc, page: number, id: number): mupdf.PDFAnnotation | null {
+export function findAnnotation(doc: PlicoDoc, page: number, id: number): mupdf.PDFAnnotation | null {
   return doc.page(page).getAnnotations().find((a) => objId(a) === id) ?? null;
 }
 
 /** Annotazione sotto il punto (coordinate pagina). Le evidenziazioni si prendono solo se `includeMarkup`. */
-export function hitTest(doc: PDFolioDoc, page: number, p: Point, tol: number, includeMarkup: boolean): AnnotRef | null {
+export function hitTest(doc: PlicoDoc, page: number, p: Point, tol: number, includeMarkup: boolean): AnnotRef | null {
   const list = listAnnotations(doc, page).reverse();
   for (const { ref, annot } of list) {
     if (isMarkup(ref.type) && !includeMarkup) continue;
@@ -134,7 +134,7 @@ function distToSegment(p: Point, a: Point, b: Point): number {
 
 // ----- creazione -----
 
-export function createMarkup(doc: PDFolioDoc, page: number, kind: MarkupKind, quads: Quad[], color: string) {
+export function createMarkup(doc: PlicoDoc, page: number, kind: MarkupKind, quads: Quad[], color: string) {
   if (!quads.length) return;
   doc.run(markupName(kind), () => {
     const a = doc.page(page).createAnnotation(kind);
@@ -152,7 +152,7 @@ export function createMarkup(doc: PDFolioDoc, page: number, kind: MarkupKind, qu
  * e dopo l'ultima. Disegno la pagina (senza annotazioni) nella sola zona della barra e guardo dove inizia
  * e finisce l'inchiostro. Se qualcosa non torna, lascio la barra com'è.
  */
-function trimToInk(doc: PDFolioDoc, page: number, q: Quad): Quad {
+function trimToInk(doc: PlicoDoc, page: number, q: Quad): Quad {
   const K = 4, PAD = 0.3;
   const x0 = q[0], x1 = q[2], y0 = q[1], y1 = q[5];
   if (!(x1 - x0 > 2) || !(y1 - y0 > 2)) return q;
@@ -197,7 +197,7 @@ function trimToInk(doc: PDFolioDoc, page: number, q: Quad): Quad {
  * Scrivo io l'aspetto: rettangoli netti sulle righe, con fusione “moltiplica” così il testo resta nero.
  * Va richiamato dopo ogni `update()`, che rigenera l'aspetto di serie.
  */
-function squareHighlight(doc: PDFolioDoc, a: mupdf.PDFAnnotation) {
+function squareHighlight(doc: PlicoDoc, a: mupdf.PDFAnnotation) {
   const obj = a.getObject();
   const rect = obj.get("Rect").asJS() as number[];
   const quads = obj.get("QuadPoints").asJS() as number[];
@@ -223,7 +223,7 @@ function squareHighlight(doc: PDFolioDoc, a: mupdf.PDFAnnotation) {
 
 const markupName = (k: MarkupKind) => (k === "Highlight" ? "Evidenzia" : k === "Underline" ? "Sottolinea" : "Barra testo");
 
-export function createShape(doc: PDFolioDoc, page: number, kind: ShapeKind, rect: Rect, style: Style): number {
+export function createShape(doc: PlicoDoc, page: number, kind: ShapeKind, rect: Rect, style: Style): number {
   return doc.run(kind === "Square" ? "Rettangolo" : "Ovale", () => {
     const a = doc.page(page).createAnnotation(kind);
     a.setRect(rect);
@@ -234,7 +234,7 @@ export function createShape(doc: PDFolioDoc, page: number, kind: ShapeKind, rect
   });
 }
 
-export function createLine(doc: PDFolioDoc, page: number, p1: Point, p2: Point, arrow: boolean, style: Style): number {
+export function createLine(doc: PlicoDoc, page: number, p1: Point, p2: Point, arrow: boolean, style: Style): number {
   return doc.run(arrow ? "Freccia" : "Linea", () => {
     const a = doc.page(page).createAnnotation("Line");
     a.setLine(p1, p2);
@@ -249,7 +249,7 @@ export function createLine(doc: PDFolioDoc, page: number, p1: Point, p2: Point, 
   });
 }
 
-export function createInk(doc: PDFolioDoc, page: number, strokes: Point[][], style: Style, name = "Disegno"): number {
+export function createInk(doc: PlicoDoc, page: number, strokes: Point[][], style: Style, name = "Disegno"): number {
   return doc.run(name, () => {
     const a = doc.page(page).createAnnotation("Ink");
     a.setColor(hexToRgb(style.color));
@@ -260,7 +260,7 @@ export function createInk(doc: PDFolioDoc, page: number, strokes: Point[][], sty
   });
 }
 
-export function createNote(doc: PDFolioDoc, page: number, at: Point, text: string, color: string): number {
+export function createNote(doc: PlicoDoc, page: number, at: Point, text: string, color: string): number {
   return doc.run("Nota", () => {
     const a = doc.page(page).createAnnotation("Text");
     a.setRect([at[0], at[1], at[0] + 24, at[1] + 24]);
@@ -271,7 +271,7 @@ export function createNote(doc: PDFolioDoc, page: number, at: Point, text: strin
   });
 }
 
-export function createFreeText(doc: PDFolioDoc, page: number, topLeft: Point, text: string, style: Style, width?: number): number {
+export function createFreeText(doc: PlicoDoc, page: number, topLeft: Point, text: string, style: Style, width?: number): number {
   const size = measureText(text, style.fontSize, width);
   return doc.run("Testo", () => {
     const a = doc.page(page).createAnnotation("FreeText");
@@ -283,7 +283,7 @@ export function createFreeText(doc: PDFolioDoc, page: number, topLeft: Point, te
   });
 }
 
-export function createSignature(doc: PDFolioDoc, page: number, sig: Signature, center: Point, width: number, color: string): number {
+export function createSignature(doc: PlicoDoc, page: number, sig: Signature, center: Point, width: number, color: string): number {
   const height = width / Math.max(sig.aspect, 0.1);
   const ox = center[0] - width / 2, oy = center[1] - height / 2;
   const strokes = sig.strokes.map((s) => s.map((p): Point => [ox + p[0] * width, oy + p[1] * height]));
@@ -309,7 +309,7 @@ export function measureText(text: string, fontSize: number, maxWidth = 360): [nu
 
 // ----- modifica -----
 
-export function moveAnnotation(doc: PDFolioDoc, page: number, id: number, dx: number, dy: number) {
+export function moveAnnotation(doc: PlicoDoc, page: number, id: number, dx: number, dy: number) {
   const a = findAnnotation(doc, page, id);
   if (!a) return;
   doc.run("Sposta", () => translate(a, dx, dy));
@@ -330,7 +330,7 @@ export function translate(a: mupdf.PDFAnnotation, dx: number, dy: number) {
   a.update();
 }
 
-export function resizeAnnotation(doc: PDFolioDoc, page: number, id: number, next: Rect) {
+export function resizeAnnotation(doc: PlicoDoc, page: number, id: number, next: Rect) {
   const a = findAnnotation(doc, page, id);
   if (!a) return;
   doc.run("Ridimensiona", () => {
@@ -351,13 +351,13 @@ export function resizeAnnotation(doc: PDFolioDoc, page: number, id: number, next
   });
 }
 
-export function deleteAnnotation(doc: PDFolioDoc, page: number, id: number) {
+export function deleteAnnotation(doc: PlicoDoc, page: number, id: number) {
   const a = findAnnotation(doc, page, id);
   if (!a) return;
   doc.run("Elimina annotazione", () => doc.page(page).deleteAnnotation(a));
 }
 
-export function setAnnotationStyle(doc: PDFolioDoc, page: number, id: number, patch: Partial<Style>) {
+export function setAnnotationStyle(doc: PlicoDoc, page: number, id: number, patch: Partial<Style>) {
   const a = findAnnotation(doc, page, id);
   if (!a) return;
   const type = a.getType();
@@ -377,7 +377,7 @@ export function setAnnotationStyle(doc: PDFolioDoc, page: number, id: number, pa
   });
 }
 
-export function setAnnotationText(doc: PDFolioDoc, page: number, id: number, text: string) {
+export function setAnnotationText(doc: PlicoDoc, page: number, id: number, text: string) {
   const a = findAnnotation(doc, page, id);
   if (!a) return;
   doc.run("Modifica testo", () => {
@@ -392,7 +392,7 @@ export function setAnnotationText(doc: PDFolioDoc, page: number, id: number, tex
   });
 }
 
-export function hideForEditing(doc: PDFolioDoc, page: number, id: number, hidden: boolean, refresh = true) {
+export function hideForEditing(doc: PlicoDoc, page: number, id: number, hidden: boolean, refresh = true) {
   const a = findAnnotation(doc, page, id);
   if (!a) return;
   a.setHiddenForEditing(hidden);
@@ -404,7 +404,7 @@ export function hideForEditing(doc: PDFolioDoc, page: number, id: number, hidden
  * Serve a mostrarla mentre la si trascina, così si muove insieme al suo bordo.
  * `rect` è la posizione in coordinate pagina.
  */
-export function annotationSprite(doc: PDFolioDoc, page: number, id: number, scale: number): { url: string; rect: Rect } | null {
+export function annotationSprite(doc: PlicoDoc, page: number, id: number, scale: number): { url: string; rect: Rect } | null {
   const a = findAnnotation(doc, page, id);
   if (!a) return null;
   const pm = a.toPixmap(mupdf.Matrix.scale(scale, scale), mupdf.ColorSpace.DeviceRGB, true);

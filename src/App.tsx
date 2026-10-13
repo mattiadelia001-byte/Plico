@@ -10,7 +10,7 @@ import { MarkupBar } from "./components/MarkupBar";
 import { Viewer } from "./components/Viewer";
 import { Dialogs } from "./dialogs/Dialogs";
 import appIcon from "./assets/app-icon.png";
-import type { PDFolioDoc } from "./engine/pdfolioDoc";
+import type { PlicoDoc } from "./engine/plicoDoc";
 import { viewerApi } from "./state/viewerApi";
 
 export function App() {
@@ -62,7 +62,7 @@ export function App() {
       onDragLeave={(e) => { if (hasFiles(e) && --counter.current <= 0) setDragOver(false); }}
       onDragOver={(e) => { if (hasFiles(e)) e.preventDefault(); }}
       onDrop={onDrop}>
-      {isMac && isTauri && <div className="titlebar" data-tauri-drag-region><span>{doc?.name ?? "PDFolio"}</span></div>}
+      {isMac && isTauri && <div className="titlebar" data-tauri-drag-region><span>{doc?.name ?? "Plico"}</span></div>}
       <TopBar />
       {doc ? (
         <div className="workspace">
@@ -89,7 +89,7 @@ function Welcome() {
   return (
     <div className="welcome" data-testid="welcome">
       <img className="logo" src={appIcon} alt="" draggable={false} />
-      <h1>PDFolio</h1>
+      <h1>Plico</h1>
       <p>Leggi, annota e riorganizza i tuoi PDF.</p>
       <div className="welcome-actions">
         <button className="primary" onClick={act.openDialog} data-testid="welcome-open"><FolderOpen size={17} /> Apri un PDF</button>
@@ -101,7 +101,7 @@ function Welcome() {
   );
 }
 
-function LockedView({ doc }: { doc: PDFolioDoc }) {
+function LockedView({ doc }: { doc: PlicoDoc }) {
   const [pw, setPw] = useState("");
   const [wrong, setWrong] = useState(false);
   const submit = () => {
@@ -120,7 +120,7 @@ function LockedView({ doc }: { doc: PDFolioDoc }) {
   );
 }
 
-function StatusBar({ doc }: { doc: PDFolioDoc }) {
+function StatusBar({ doc }: { doc: PlicoDoc }) {
   useDocVersion(doc);
   const page = useStore((s) => s.currentPage);
   const zoom = useStore((s) => s.zoom);

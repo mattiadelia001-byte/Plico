@@ -1,11 +1,11 @@
 [package]
-name = "pdfolio"
+name = "plico"
 version = "1.0.0"
-description = "PDFolio: lettore ed editor di PDF"
+description = "Plico: lettore ed editor di PDF"
 edition = "2021"
 
 [lib]
-name = "pdfolio_lib"
+name = "plico_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

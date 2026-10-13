@@ -65,7 +65,7 @@ fn print_page(window: WebviewWindow) -> Result<(), String> {
 /// Percorso nella cartella temporanea dove mettere la copia da condividere.
 #[tauri::command]
 fn share_temp_path(name: String) -> Result<String, String> {
-    let dir = std::env::temp_dir().join("PDFolio-condividi");
+    let dir = std::env::temp_dir().join("Plico-condividi");
     std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
     // il nome arriva dall'interfaccia: tengo solo l'ultima parte per non uscire dalla cartella
     let file = std::path::Path::new(&name).file_name().ok_or("Nome non valido")?;
@@ -142,7 +142,7 @@ pub fn run() {
             exit_app
         ])
         .build(tauri::generate_context!())
-        .expect("errore durante l'avvio di PDFolio");
+        .expect("errore durante l'avvio di Plico");
 
     app.run(|handle, event| {
         // su macOS i file aperti dal Finder arrivano come evento, non come argomenti

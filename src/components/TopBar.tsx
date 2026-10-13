@@ -7,12 +7,12 @@ import { activeDoc, useStore } from "../state/store";
 import * as act from "../state/actions";
 import { isMac } from "../platform";
 import { IconButton, Menu, type MenuItem } from "./ui";
-import type { PDFolioDoc } from "../engine/pdfolioDoc";
+import type { PlicoDoc } from "../engine/plicoDoc";
 
 const mod = isMac ? "⌘" : "Ctrl+";
 const noop = () => () => {};
 
-export function useDocVersion(doc: PDFolioDoc | null) {
+export function useDocVersion(doc: PlicoDoc | null) {
   return useSyncExternalStore(doc ? doc.subscribe : noop, doc ? doc.getSnapshot : () => 0);
 }
 

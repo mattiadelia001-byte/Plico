@@ -1,5 +1,5 @@
 import type * as mupdf from "mupdf";
-import type { Quad } from "./pdfolioDoc";
+import type { Quad } from "./plicoDoc";
 
 /** `base` è la linea su cui poggiano le lettere, `size` la grandezza del carattere. */
 export interface Ch { c: string; x0: number; x1: number; y0: number; y1: number; base: number; size: number }

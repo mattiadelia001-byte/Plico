@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import type { PDFolioDoc } from "../engine/pdfolioDoc";
+import type { PlicoDoc } from "../engine/plicoDoc";
 import { useStore } from "../state/store";
 import { viewerApi } from "../state/viewerApi";
 import { PageOverlay } from "./PageOverlay";
@@ -8,7 +8,7 @@ export const PT = 96 / 72; // pixel CSS per punto PDF a zoom 100%
 const GAP = 14;
 const MARGIN = 28;
 
-export function Viewer({ doc }: { doc: PDFolioDoc }) {
+export function Viewer({ doc }: { doc: PlicoDoc }) {
   const version = useSyncExternalStore(doc.subscribe, doc.getSnapshot);
   const zoom = useStore((s) => s.zoom);
   const fit = useStore((s) => s.fit);
@@ -162,7 +162,7 @@ export function Viewer({ doc }: { doc: PDFolioDoc }) {
   );
 }
 
-const PageView = memo(function PageView(props: { doc: PDFolioDoc; index: number; S: number; version: number; w: number; h: number }) {
+const PageView = memo(function PageView(props: { doc: PlicoDoc; index: number; S: number; version: number; w: number; h: number }) {
   const { doc, index, S, version, w, h } = props;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [error, setError] = useState<string | null>(null);

@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "PDFolio",
+  "productName": "Plico",
   "version": "1.0.0",
   "identifier": "com.mattiadelia.folio.desktop",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "PDFolio",
+        "title": "Plico",
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
         "width": 1280,

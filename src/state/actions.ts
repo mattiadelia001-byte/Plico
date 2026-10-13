@@ -1,4 +1,4 @@
-import { PDFolioDoc } from "../engine/pdfolioDoc";
+import { PlicoDoc } from "../engine/plicoDoc";
 import * as A from "../engine/annotations";
 import * as T from "../engine/tools";
 import * as platform from "../platform";
@@ -17,7 +17,7 @@ export async function openPicked(files: platform.PickedFile[]) {
     const existing = f.path ? st().docs.find((d) => d.path === f.path) : null;
     if (existing) { activate(existing.id); continue; }
     try {
-      const doc = PDFolioDoc.open(f.bytes, f.name, f.path);
+      const doc = PlicoDoc.open(f.bytes, f.name, f.path);
       st().patch({ docs: [...st().docs, doc] });
       activate(doc.id);
     } catch (e) {
@@ -40,7 +40,7 @@ export async function openPaths(paths: string[]) {
 }
 
 export function newDocument() {
-  const doc = PDFolioDoc.blank(`Senza titolo ${st().docs.filter((d) => !d.path).length + 1}`);
+  const doc = PlicoDoc.blank(`Senza titolo ${st().docs.filter((d) => !d.path).length + 1}`);
   st().patch({ docs: [...st().docs, doc] });
   activate(doc.id);
 }
@@ -58,7 +58,7 @@ export function activate(id: string) {
   requestAnimationFrame(() => viewerApi.scrollToPage(page));
 }
 
-export async function saveDoc(doc: PDFolioDoc, forceDialog = false): Promise<boolean> {
+export async function saveDoc(doc: PlicoDoc, forceDialog = false): Promise<boolean> {
   try {
     let saved: platform.Saved | null;
     const bytes = doc.toBytes();
@@ -80,7 +80,7 @@ export async function saveDoc(doc: PDFolioDoc, forceDialog = false): Promise<boo
 }
 
 /** Condivide il PDF com'è adesso, anche con modifiche non ancora salvate. */
-export async function shareDoc(doc: PDFolioDoc, anchor: DOMRect) {
+export async function shareDoc(doc: PlicoDoc, anchor: DOMRect) {
   try {
     const name = stripPdf(doc.name) + ".pdf";
     if (!(await platform.shareFile(doc.toBytes(), name, anchor))) {
@@ -105,7 +105,7 @@ export async function closeDoc(id: string): Promise<boolean> {
   if (st().activeId === id) {
     const next = rest[rest.length - 1];
     if (next) activate(next.id);
-    else { st().patch({ activeId: null, hits: [], searchQuery: "" }); platform.setWindowTitle("PDFolio"); }
+    else { st().patch({ activeId: null, hits: [], searchQuery: "" }); platform.setWindowTitle("Plico"); }
   }
   return true;
 }
@@ -124,7 +124,7 @@ export async function confirmCloseAll(): Promise<boolean> {
 
 // ---------- pagine ----------
 
-export function targetPages(doc: PDFolioDoc): number[] {
+export function targetPages(doc: PlicoDoc): number[] {
   const { selectedPages, currentPage } = st();
   const valid = selectedPages.filter((p) => p < doc.pageCount).sort((a, b) => a - b);
   return valid.length ? valid : [Math.min(currentPage, doc.pageCount - 1)];

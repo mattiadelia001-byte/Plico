@@ -1,4 +1,4 @@
-# PDFolio
+# Plico
 
 Lettore ed editor di PDF per Mac e Windows. Interfaccia in React + TypeScript, guscio nativo in Rust
 ([Tauri](https://tauri.app)), motore PDF [MuPDF](https://mupdf.com) (WebAssembly).
@@ -22,15 +22,15 @@ Serve [Node](https://nodejs.org) 20+ e [Rust](https://rustup.rs). Su Windows ser
 ## Compilare l'app
 
 ```sh
-npm run build:mac                          # Mac: crea PDFolio.app (firma locale)
+npm run build:mac                          # Mac: crea Plico.app (firma locale)
 npm run tauri build                      # Windows: crea l'installer .exe e .msi
 ```
 
-Su Mac l'app compilata è in `src-tauri/target.noindex/release/bundle/macos/PDFolio.app`;
+Su Mac l'app compilata è in `src-tauri/target.noindex/release/bundle/macos/Plico.app`;
 su Windows gli installer sono in `src-tauri/target.noindex/release/bundle/nsis` e `.../msi`.
 
 Non hai un PC Windows a portata di mano? Carica il progetto su GitHub e avvia il flusso
-**Actions → Compila PDFolio**: produce l'installer per Windows e l'app per Mac.
+**Actions → Compila Plico**: produce l'installer per Windows e l'app per Mac.
 
 ## Test
 
@@ -47,11 +47,11 @@ I percorsi dei PDF di prova in `tests/e2e/lib.mjs` e `tests/engine.test.ts` vann
 
 ## Licenza
 
-MuPDF è distribuito con licenza **AGPL-3.0**. Usare PDFolio per sé o in famiglia non pone problemi; se lo
+MuPDF è distribuito con licenza **AGPL-3.0**. Usare Plico per sé o in famiglia non pone problemi; se lo
 distribuisci ad altri, anche gratis, devi rendere disponibile il codice sorgente dell'app oppure acquistare
 una licenza commerciale da Artifex.
 
 ## Nota su macOS
 
 L'app non è firmata con un certificato Apple: sul Mac che l'ha compilata si apre normalmente. Se la copi su un altro
-Mac e compare "app danneggiata", apri il Terminale ed esegui `xattr -cr /percorso/di/PDFolio.app`.
+Mac e compare "app danneggiata", apri il Terminale ed esegui `xattr -cr /percorso/di/Plico.app`.
