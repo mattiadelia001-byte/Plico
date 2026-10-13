@@ -1,0 +1,15 @@
+import { launch, openPdf, ok, done, shot } from "./lib.mjs";
+const { browser, page, errors } = await launch();
+await page.waitForSelector('[data-testid="welcome"]');
+await shot(page, "01-welcome");
+ok(true, "la schermata iniziale compare");
+await openPdf(page);
+await shot(page, "02-open");
+ok(await page.locator(".tab").count() === 1, "si apre una scheda");
+ok((await page.getByTestId("page-count").textContent()).includes("3"), "contatore pagine: " + await page.getByTestId("page-count").textContent());
+const canvas = page.locator("canvas.page-canvas").first();
+const dims = await canvas.evaluate((c) => [c.width, c.height, c.clientWidth, c.clientHeight]);
+ok(dims[0] >= dims[2] * 1.9, `canvas ad alta risoluzione (pixel ${dims[0]} su ${dims[2]} css)`);
+console.log("errori console:", errors.length ? errors : "nessuno");
+await browser.close();
+process.exit(done() || (errors.length ? 1 : 0));

@@ -1,0 +1,61 @@
+name: Compila Folio
+
+# Si avvia a mano dalla scheda "Actions" di GitHub, oppure creando un tag che inizia con "v" (es. v1.0.0).
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            label: windows
+          - os: macos-latest
+            label: mac-apple-silicon
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri -> target.noindex"
+
+      - run: npm ci
+
+      # su macOS creo solo l'app (il .dmg richiede una sessione grafica)
+      - name: Compila (Windows)
+        if: matrix.os == 'windows-latest'
+        run: npx tauri build
+
+      - name: Compila (macOS)
+        if: matrix.os == 'macos-latest'
+        run: npx tauri build --bundles app
+
+      - name: Comprimi l'app per macOS
+        if: matrix.os == 'macos-latest'
+        run: ditto -c -k --keepParent src-tauri/target.noindex/release/bundle/macos/Folio.app Folio-mac.zip
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'windows-latest'
+        with:
+          name: Folio-windows
+          path: |
+            src-tauri/target.noindex/release/bundle/nsis/*.exe
+            src-tauri/target.noindex/release/bundle/msi/*.msi
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.os == 'macos-latest'
+        with:
+          name: Folio-mac
+          path: Folio-mac.zip
