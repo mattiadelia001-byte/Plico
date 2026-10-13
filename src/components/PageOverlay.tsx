@@ -10,7 +10,7 @@ import { ContextMenu, type MenuItem } from "./ui";
 
 type Drag =
   | { kind: "create"; tool: ToolId; start: Point; cur: Point; pts: Point[] }
-  | { kind: "move"; id: number; start: Point; dx: number; dy: number; moved: boolean }
+  | { kind: "move"; id: number; start: Point; dx: number; dy: number; moved: boolean; sprite?: { url: string; rect: Rect } }
   | { kind: "resize"; id: number; orig: Rect; next: Rect }
   | { kind: "select-text"; start: Point; cur: Point; moved: boolean; anchor: Pos | null; quads: Quad[]; text: string };
 
@@ -88,13 +88,22 @@ export function PageOverlay(props: { doc: PDFolioDoc; index: number; S: number; 
   const select = (id: number | null) =>
     store.getState().patch({ selectedAnnot: id === null ? null : { page: index, id }, selection: null });
 
+  /** Chiude un trascinamento senza applicarlo: se l'annotazione era nascosta per l'anteprima, torna visibile. */
+  function cancelDrag() {
+    const d = dragRef.current;
+    if (d?.kind === "move" && d.sprite) A.hideForEditing(doc, index, d.id, false);
+    setDrag(null);
+  }
+  const cancelRef = useRef(cancelDrag);
+  cancelRef.current = cancelDrag;
+
   // Esc annulla un trascinamento in corso
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && dragRef.current) { setDrag(null); e.stopPropagation(); }
+      if (e.key === "Escape" && dragRef.current) { cancelRef.current(); e.stopPropagation(); }
     };
     window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
+    return () => { window.removeEventListener("keydown", onKey, true); const d = dragRef.current; if (d?.kind === "move" && d.sprite) cancelRef.current(); };
   }, []);
 
   // ---------- puntatore ----------
@@ -137,7 +146,14 @@ export function PageOverlay(props: { doc: PDFolioDoc; index: number; S: number; 
       setDrag({ ...d, cur: p, pts });
     } else if (d.kind === "move") {
       const dx = p[0] - d.start[0], dy = p[1] - d.start[1];
-      setDrag({ ...d, dx, dy, moved: d.moved || Math.hypot(dx, dy) * S > 3 });
+      const moved = d.moved || Math.hypot(dx, dy) * S > 3;
+      let sprite = d.sprite;
+      if (moved && !sprite) {
+        // la forma viaggia con il cursore: la tolgo dalla pagina e ne mostro l'immagine che si sposta
+        sprite = A.annotationSprite(doc, index, d.id, S * (window.devicePixelRatio || 1)) ?? undefined;
+        if (sprite) A.hideForEditing(doc, index, d.id, true);
+      }
+      setDrag({ ...d, dx, dy, moved, sprite });
     } else if (d.kind === "resize") {
       setDrag({ ...d, next: [d.orig[0], d.orig[1], Math.max(d.orig[0] + 6, p[0]), Math.max(d.orig[1] + 6, p[1])] });
     } else {
@@ -156,6 +172,7 @@ export function PageOverlay(props: { doc: PDFolioDoc; index: number; S: number; 
     const d = dragRef.current;
     if (!d) return;
     const p = toPage(e);
+    if (d.kind === "move" && d.sprite) A.hideForEditing(doc, index, d.id, false, false);
     setDrag(null);
     try { layerRef.current?.releasePointerCapture(e.pointerId); } catch { /* già rilasciato */ }
     const s = store.getState();
@@ -359,6 +376,10 @@ export function PageOverlay(props: { doc: PDFolioDoc; index: number; S: number; 
         {selection?.page === index && selection.quads.map((q, k) => <polygon key={k} points={polygon(q)} fill="rgba(10,132,255,.32)" />)}
         {drag?.kind === "select-text" && drag.quads.map((q, k) => <polygon key={k} points={polygon(q)} fill="rgba(10,132,255,.32)" />)}
         {preview}
+        {drag?.kind === "move" && drag.sprite && (
+          <image href={drag.sprite.url} x={drag.sprite.rect[0] + drag.dx} y={drag.sprite.rect[1] + drag.dy}
+            width={drag.sprite.rect[2] - drag.sprite.rect[0]} height={drag.sprite.rect[3] - drag.sprite.rect[1]} data-testid="move-sprite" />
+        )}
         {frame && (
           <g>
             <rect x={frame[0] - sw(2)} y={frame[1] - sw(2)} width={frame[2] - frame[0] + sw(4)} height={frame[3] - frame[1] + sw(4)}
@@ -376,7 +397,7 @@ export function PageOverlay(props: { doc: PDFolioDoc; index: number; S: number; 
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        onPointerCancel={() => setDrag(null)}
+        onPointerCancel={cancelDrag}
         onContextMenu={onContextMenu}
         data-testid={`page-${index}`}
       />

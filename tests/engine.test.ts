@@ -47,9 +47,9 @@ ok(hit && hit.page === 0, "ricerca: trovato 'Capitolo 1' a pagina 1, snippet: " 
 A.createMarkup(doc, 0, "Highlight", hit.quads, "#ffe000");
 const hlAp = () => doc.page(0).getAnnotations().find((x) => x.getType() === "Highlight")!.getObject().get("AP").get("N").readStream().asString();
 ok(!/ c\n/.test(hlAp()) && /\bf\b/.test(hlAp()), "l'evidenziazione ha gli estremi squadrati (nessuna curva nel disegno)");
-const hlRect = A.listAnnotations(doc, 0).find((x) => x.ref.type === "Highlight")!.ref.bounds;
+const hlQuad = A.listAnnotations(doc, 0).find((x) => x.ref.type === "Highlight")!.annot.getQuadPoints()[0];
 const fullH = hit.quads[0][5] - hit.quads[0][1];
-ok(hlRect[3] - hlRect[1] < fullH * 0.92, "la barra è più bassa del riquadro del carattere (" + (hlRect[3] - hlRect[1]).toFixed(1) + " pt contro " + fullH.toFixed(1) + ")");
+ok(hlQuad[5] - hlQuad[1] < fullH * 0.92, "la barra è più bassa del riquadro del carattere (" + (hlQuad[5] - hlQuad[1]).toFixed(1) + " pt contro " + fullH.toFixed(1) + ")");
 const sq = A.createShape(doc, 0, "Square", [100, 300, 220, 380], style);
 const ln = A.createLine(doc, 0, [100, 420], [260, 480], true, style);
 const ink = A.createInk(doc, 0, [[[300, 300], [340, 340], [380, 300]]], style);
@@ -185,6 +185,14 @@ ok(blank.pageCount === 1 && blank.size(0)[1] === 842, "documento nuovo A4");
   ok(sd.search("secondo: l alimento").length === 1, "ricerca di una frase");
   ok(sd.search("zzz").length === 0 && sd.search("  ").length === 0, "nessun risultato");
   ok(sd.search("alimento")[4].page === 1, "pagina del risultato");
+
+  // evidenziatore: la barra è alta come la scritta (14 pt), non come il riquadro del font, e non sborda ai lati
+  const hit = sd.search("ALIMENTO")[0];
+  A.createMarkup(sd, hit.page, "Highlight", hit.quads, "#ffd60a");
+  const hl = A.listAnnotations(sd, hit.page).find((l) => l.ref.type === "Highlight")!;
+  const hq = hl.annot.getQuadPoints()[0];
+  ok(hq[5] - hq[1] > 11 && hq[5] - hq[1] < 15.5, `altezza evidenziatore ${(hq[5] - hq[1]).toFixed(1)} pt`);
+  ok(hq[0] >= hit.quads[0][0] - 0.01 && hq[2] <= hit.quads[0][2] + 0.01, "evidenziatore non più largo della parola");
 }
 
 console.log(fails === 0 ? "TUTTI I TEST SUPERATI" : fails + " TEST FALLITI");

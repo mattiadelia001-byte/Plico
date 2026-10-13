@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from "react";
 import {
   Columns2, FileDown, FilePlus2, FolderOpen, PanelLeft, PencilLine, RotateCcw, RotateCw, Save, Undo2, Redo2,
-  ZoomIn, ZoomOut, X, Plus, Search, ChevronUp, ChevronDown, FileText,
+  ZoomIn, ZoomOut, X, Share, Plus, Search, ChevronUp, ChevronDown, FileText,
 } from "lucide-react";
 import { activeDoc, useStore } from "../state/store";
 import * as act from "../state/actions";
@@ -95,6 +95,7 @@ export function TopBar() {
         <span className="sep" />
         <IconButton title="Apri" onClick={act.openDialog}><FolderOpen size={18} /></IconButton>
         <IconButton title={`Salva (${mod}S)`} disabled={!has || !doc?.dirty} onClick={() => doc && act.saveDoc(doc)} testId="save"><Save size={18} /></IconButton>
+        <IconButton title="Condividi" disabled={!has} onClick={(e) => doc && act.shareDoc(doc, e.currentTarget.getBoundingClientRect())} testId="share"><Share size={18} /></IconButton>
         <span className="sep" />
         <IconButton title={`Annulla (${mod}Z)`} disabled={!doc?.canUndo} onClick={act.undo} testId="undo"><Undo2 size={18} /></IconButton>
         <IconButton title={`Ripristina (${mod}⇧Z)`} disabled={!doc?.canRedo} onClick={act.redo} testId="redo"><Redo2 size={18} /></IconButton>

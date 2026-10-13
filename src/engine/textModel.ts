@@ -1,7 +1,8 @@
 import type * as mupdf from "mupdf";
 import type { Quad } from "./pdfolioDoc";
 
-export interface Ch { c: string; x0: number; x1: number; y0: number; y1: number }
+/** `base` è la linea su cui poggiano le lettere, `size` la grandezza del carattere. */
+export interface Ch { c: string; x0: number; x1: number; y0: number; y1: number; base: number; size: number }
 export interface TLine { chars: Ch[]; x0: number; x1: number; y0: number; y1: number }
 /** Posizione tra due caratteri: `ch` è l'indice di inserimento (0..lunghezza). */
 export interface Pos { line: number; ch: number }
@@ -11,6 +12,8 @@ export interface Match { quads: Quad[]; snippet: string }
 /** Forma “neutra” di un carattere per la ricerca: senza maiuscole né accenti (ﬁ → fi, è → e). */
 const fold = (c: string) => c.normalize("NFKD").replace(/\p{M}/gu, "").toLowerCase();
 
+/** Altezza delle lettere sopra e sotto la linea di base, in frazioni della grandezza del carattere. */
+const ASCENT = 0.8, DESCENT = 0.22;
 const isSpace = (c: string) => /\s/.test(c);
 const cmp = (a: Pos, b: Pos) => (a.line !== b.line ? a.line - b.line : a.ch - b.ch);
 
@@ -28,10 +31,10 @@ export class TextModel {
     let cur: TLine | null = null;
     st.walk({
       beginLine() { cur = { chars: [], x0: Infinity, x1: -Infinity, y0: Infinity, y1: -Infinity }; },
-      onChar(c, _origin, _font, _size, q) {
+      onChar(c, origin, _font, size, q) {
         if (!cur) return;
         const xs = [q[0], q[2], q[4], q[6]], ys = [q[1], q[3], q[5], q[7]];
-        const ch = { c, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+        const ch = { c, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys), base: origin[1], size };
         cur.chars.push(ch);
         cur.x0 = Math.min(cur.x0, ch.x0); cur.x1 = Math.max(cur.x1, ch.x1);
         cur.y0 = Math.min(cur.y0, ch.y0); cur.y1 = Math.max(cur.y1, ch.y1);
@@ -45,6 +48,32 @@ export class TextModel {
   }
 
   get empty() { return this.lines.length === 0; }
+
+  /**
+   * Stringe una barra di selezione attorno alla scritta: dal bordo alto delle lettere alte
+   * al fondo delle lettere con la coda, calcolati sulla grandezza del carattere.
+   * Il riquadro di MuPDF dipende dal font e spesso lascia molto spazio sotto la riga.
+   * Se non trovo le lettere, restituisco la barra com'è.
+   */
+  tighten(q: Quad): Quad {
+    const xs = [q[0], q[2], q[4], q[6]], ys = [q[1], q[3], q[5], q[7]];
+    const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
+    const cy = (y0 + y1) / 2;
+    let top = Infinity, bottom = -Infinity;
+    for (const l of this.lines) {
+      if (cy < l.y0 || cy > l.y1) continue;
+      for (const k of l.chars) {
+        const cx = (k.x0 + k.x1) / 2;
+        if (cx < x0 || cx > x1 || isSpace(k.c) || !(k.size > 0)) continue;
+        top = Math.min(top, k.base - k.size * ASCENT);
+        bottom = Math.max(bottom, k.base + k.size * DESCENT);
+      }
+    }
+    if (!isFinite(top)) return q;
+    // mai fuori dal riquadro originale
+    top = Math.max(top, y0); bottom = Math.min(bottom, y1);
+    return [x0, top, x1, top, x0, bottom, x1, bottom];
+  }
 
   /** Cerca ignorando maiuscole, minuscole e accenti; spazi e a capo contano come un solo spazio. */
   search(query: string, limit = Infinity): Match[] {

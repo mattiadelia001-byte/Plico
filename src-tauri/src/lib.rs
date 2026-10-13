@@ -62,6 +62,56 @@ fn print_page(window: WebviewWindow) -> Result<(), String> {
     window.print().map_err(|e| e.to_string())
 }
 
+/// Percorso nella cartella temporanea dove mettere la copia da condividere.
+#[tauri::command]
+fn share_temp_path(name: String) -> Result<String, String> {
+    let dir = std::env::temp_dir().join("PDFolio-condividi");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    // il nome arriva dall'interfaccia: tengo solo l'ultima parte per non uscire dalla cartella
+    let file = std::path::Path::new(&name).file_name().ok_or("Nome non valido")?;
+    Ok(dir.join(file).to_string_lossy().to_string())
+}
+
+/// Su Mac apre il foglio di condivisione del sistema (Mail, Messaggi, AirDrop…) accanto al pulsante.
+/// `x`, `y`, `w`, `h` sono il riquadro del pulsante nella finestra, in pixel dell'interfaccia.
+#[cfg(target_os = "macos")]
+#[tauri::command]
+fn share_file(window: WebviewWindow, path: String, x: f64, y: f64, w: f64, h: f64) -> Result<(), String> {
+    use objc2::{runtime::AnyObject, AnyThread};
+    use objc2_app_kit::{NSSharingServicePicker, NSView};
+    use objc2_foundation::{NSArray, NSPoint, NSRect, NSRectEdge, NSSize, NSString, NSURL};
+
+    let view = window.ns_view().map_err(|e| e.to_string())? as usize;
+    window
+        .run_on_main_thread(move || unsafe {
+            let view: &NSView = &*(view as *const NSView);
+            let url = NSURL::fileURLWithPath(&NSString::from_str(&path));
+            let item: &AnyObject = &url;
+            let items = NSArray::from_slice(&[item]);
+            let picker = NSSharingServicePicker::initWithItems(NSSharingServicePicker::alloc(), &items);
+            // le coordinate dell'interfaccia partono dall'alto; la vista può partire dal basso
+            let top = if view.isFlipped() { y } else { view.bounds().size.height - y - h };
+            let rect = NSRect::new(NSPoint::new(x, top), NSSize::new(w, h));
+            picker.showRelativeToRect_ofView_preferredEdge(rect, view, NSRectEdge::NSMinYEdge);
+        })
+        .map_err(|e| e.to_string())
+}
+
+/// Su Windows mostra il file in Esplora risorse, dove c'è il pulsante Condividi di sistema.
+#[cfg(not(target_os = "macos"))]
+#[tauri::command]
+fn share_file(path: String, _x: f64, _y: f64, _w: f64, _h: f64) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(format!("/select,{path}"))
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+    let _ = path;
+    Ok(())
+}
+
 #[tauri::command]
 fn exit_app(app: AppHandle) {
     app.exit(0);
@@ -87,6 +137,8 @@ pub fn run() {
             write_file,
             take_pending_files,
             print_page,
+            share_temp_path,
+            share_file,
             exit_app
         ])
         .build(tauri::generate_context!())

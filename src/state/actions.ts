@@ -79,6 +79,19 @@ export async function saveDoc(doc: PDFolioDoc, forceDialog = false): Promise<boo
   }
 }
 
+/** Condivide il PDF com'è adesso, anche con modifiche non ancora salvate. */
+export async function shareDoc(doc: PDFolioDoc, anchor: DOMRect) {
+  try {
+    const name = stripPdf(doc.name) + ".pdf";
+    if (!(await platform.shareFile(doc.toBytes(), name, anchor))) {
+      platform.download(doc.toBytes(), name, "application/pdf");
+      toast("Condivisione non disponibile qui: ho scaricato il file");
+    }
+  } catch (e) {
+    toast(`Condivisione non riuscita: ${(e as Error).message}`);
+  }
+}
+
 export async function closeDoc(id: string): Promise<boolean> {
   const doc = st().docs.find((d) => d.id === id);
   if (!doc) return true;

@@ -2,7 +2,7 @@ import {
   MousePointer2, Highlighter, Underline, Strikethrough, Type, StickyNote, Square, Circle, Minus, MoveUpRight,
   Pencil, PenLine, Crop, Trash2, X, ChevronDown,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { activeDoc, saveSignatures, useStore, type ToolId } from "../state/store";
 import * as act from "../state/actions";
 import * as A from "../engine/annotations";
@@ -24,7 +24,20 @@ const TOOLS: { id: ToolId; title: string; icon: ReactNode }[] = [
   { id: "crop", title: "Ritaglia pagina", icon: <Crop size={17} /> },
 ];
 
-const SWATCHES = ["#ff3b30", "#ff9500", "#ffd60a", "#34c759", "#0a84ff", "#af52de", "#111111", "#ffffff"];
+const COLORS: { hex: string; name: string }[] = [
+  { hex: "#ff3b30", name: "Rosso" },
+  { hex: "#ff9500", name: "Arancione" },
+  { hex: "#ffd60a", name: "Giallo" },
+  { hex: "#34c759", name: "Verde" },
+  { hex: "#0a84ff", name: "Blu" },
+  { hex: "#af52de", name: "Viola" },
+  { hex: "#111111", name: "Nero" },
+  { hex: "#ffffff", name: "Bianco" },
+];
+
+function Dot({ color }: { color: string }) {
+  return <span className="color-dot" style={{ background: color }} />;
+}
 
 function StrokeSample({ w, color }: { w: number; color: string }) {
   return <svg width="28" height="16" viewBox="0 0 28 16"><line x1="3" y1="8" x2="25" y2="8" stroke={color} strokeWidth={w} strokeLinecap="round" /></svg>;
@@ -42,6 +55,8 @@ export function MarkupBar() {
   const showWidth = ["rect", "oval", "line", "arrow", "draw"].includes(s.tool) || ["Square", "Circle", "Line", "Ink"].includes(selType ?? "");
   const showFont = s.tool === "text" || selType === "FreeText";
 
+  const paletteRef = useRef<HTMLInputElement>(null);
+  const current = COLORS.find((c) => c.hex === s.color.toLowerCase());
   const setColor = (c: string) => { s.patch({ color: c }); act.applyStyleToSelection({ color: c }); };
 
   const pickTool = (t: ToolId) => {
@@ -64,13 +79,22 @@ export function MarkupBar() {
         <IconButton key={t.id} title={t.title} active={s.tool === t.id} onClick={() => pickTool(t.id)} testId={`tool-${t.id}`}>{t.icon}</IconButton>
       ))}
       <span className="sep" />
-      <div className="swatches">
-        {SWATCHES.map((c) => (
-          <button key={c} className={"swatch" + (s.color.toLowerCase() === c ? " on" : "")} style={{ background: c }} title={c} onClick={() => setColor(c)} data-testid={`swatch-${c.slice(1)}`} />
-        ))}
-        <label className="swatch custom" title="Colore personalizzato">
-          <input type="color" value={s.color} onChange={(e) => setColor(e.target.value)} />
-        </label>
+      <div className="color-pick">
+        <Menu
+          testId="color-menu"
+          title="Colore"
+          label={<span className="color-label"><Dot color={s.color} />{current?.name ?? "Personalizzato"}<ChevronDown size={13} /></span>}
+          items={[
+            ...COLORS.map((c) => ({
+              label: c.name, checked: c.hex === s.color.toLowerCase(), icon: <Dot color={c.hex} />, testId: `color-${c.hex.slice(1)}`,
+              onClick: () => setColor(c.hex),
+            })),
+            { separator: true },
+            { label: "Tavolozza colori…", testId: "color-palette", onClick: () => paletteRef.current?.click() },
+          ]}
+        />
+        <input ref={paletteRef} type="color" className="color-native" value={s.color} tabIndex={-1} aria-hidden
+          onChange={(e) => setColor(e.target.value)} />
       </div>
       {showWidth && (
         <div className="stroke" title="Spessore del tratto" data-testid="stroke-control">

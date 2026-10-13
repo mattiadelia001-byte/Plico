@@ -140,22 +140,56 @@ export function createMarkup(doc: PDFolioDoc, page: number, kind: MarkupKind, qu
     const a = doc.page(page).createAnnotation(kind);
     a.setColor(hexToRgb(color));
     if (kind === "Highlight") a.setOpacity(HIGHLIGHT_OPACITY);
-    a.setQuadPoints(kind === "Highlight" ? quads.map(tightQuad) : quads);
+    const model = doc.textModel(page);
+    a.setQuadPoints(kind === "Highlight" ? quads.map((q) => trimToInk(doc, page, model.tighten(q))) : quads);
     a.update();
     if (kind === "Highlight") squareHighlight(doc, a);
   });
 }
 
 /**
- * Restringe la barra alla scritta: dal bordo delle maiuscole al fondo delle lettere con la coda.
- * Il riquadro del carattere comprende anche spazio sopra e sotto che qui non serve.
+ * Accorcia la barra ai lati: il riquadro di un carattere comprende un po' di aria prima della prima lettera
+ * e dopo l'ultima. Disegno la pagina (senza annotazioni) nella sola zona della barra e guardo dove inizia
+ * e finisce l'inchiostro. Se qualcosa non torna, lascio la barra com'è.
  */
-function tightQuad(q: Quad): Quad {
-  const xs = [q[0], q[2], q[4], q[6]], ys = [q[1], q[3], q[5], q[7]];
-  const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
-  const h = y1 - y0;
-  const t = y0 + h * 0.17, b = y1 - h * 0.03;
-  return [x0, t, x1, t, x0, b, x1, b];
+function trimToInk(doc: PDFolioDoc, page: number, q: Quad): Quad {
+  const K = 4, PAD = 0.3;
+  const x0 = q[0], x1 = q[2], y0 = q[1], y1 = q[5];
+  if (!(x1 - x0 > 2) || !(y1 - y0 > 2)) return q;
+  let pm: mupdf.Pixmap | null = null, dev: mupdf.DrawDevice | null = null;
+  try {
+    pm = new mupdf.Pixmap(mupdf.ColorSpace.DeviceRGB, [Math.floor(x0 * K), Math.floor(y0 * K), Math.ceil(x1 * K), Math.ceil(y1 * K)], false);
+    pm.clear(255);
+    dev = new mupdf.DrawDevice(mupdf.Matrix.scale(K, K), pm);
+    doc.page(page).runPageContents(dev, mupdf.Matrix.identity);
+    dev.close();
+    const w = pm.getWidth(), h = pm.getHeight(), n = pm.getNumberOfComponents(), stride = pm.getStride(), px = pm.getPixels();
+    // colore di fondo: valore centrale della riga in alto
+    const bg = [0, 1, 2].map((c) => {
+      const row: number[] = [];
+      for (let x = 0; x < w; x++) row.push(px[x * n + c]);
+      return row.sort((a, b) => a - b)[w >> 1];
+    });
+    const inked = (x: number) => {
+      for (let y = 0; y < h; y++) {
+        const i = y * stride + x * n;
+        if (Math.abs(px[i] - bg[0]) + Math.abs(px[i + 1] - bg[1]) + Math.abs(px[i + 2] - bg[2]) > 90) return true;
+      }
+      return false;
+    };
+    let l = 0, r = w - 1;
+    while (l < w && !inked(l)) l++;
+    while (r > l && !inked(r)) r--;
+    if (l >= w) return q; // niente inchiostro (testo invisibile o immagine): non tocco nulla
+    const nx0 = Math.max(x0, Math.floor(x0 * K) / K + l / K - PAD);
+    const nx1 = Math.min(x1, Math.floor(x0 * K) / K + (r + 1) / K + PAD);
+    return nx1 - nx0 > 1 ? [nx0, q[1], nx1, q[3], nx0, q[5], nx1, q[7]] : q;
+  } catch {
+    return q;
+  } finally {
+    dev?.destroy();
+    pm?.destroy();
+  }
 }
 
 /**
@@ -358,9 +392,41 @@ export function setAnnotationText(doc: PDFolioDoc, page: number, id: number, tex
   });
 }
 
-export function hideForEditing(doc: PDFolioDoc, page: number, id: number, hidden: boolean) {
+export function hideForEditing(doc: PDFolioDoc, page: number, id: number, hidden: boolean, refresh = true) {
   const a = findAnnotation(doc, page, id);
   if (!a) return;
   a.setHiddenForEditing(hidden);
-  doc.refresh();
+  if (refresh) doc.refresh();
+}
+
+/**
+ * Immagine dell'annotazione da sola, con sfondo trasparente.
+ * Serve a mostrarla mentre la si trascina, così si muove insieme al suo bordo.
+ * `rect` è la posizione in coordinate pagina.
+ */
+export function annotationSprite(doc: PDFolioDoc, page: number, id: number, scale: number): { url: string; rect: Rect } | null {
+  const a = findAnnotation(doc, page, id);
+  if (!a) return null;
+  const pm = a.toPixmap(mupdf.Matrix.scale(scale, scale), mupdf.ColorSpace.DeviceRGB, true);
+  try {
+    const w = pm.getWidth(), h = pm.getHeight(), n = pm.getNumberOfComponents(), stride = pm.getStride();
+    const src = pm.getPixels();
+    const out = new Uint8ClampedArray(w * h * 4);
+    for (let y = 0; y < h; y++) {
+      let s = y * stride, d = y * w * 4;
+      for (let x = 0; x < w; x++, s += n, d += 4) {
+        const al = n > 3 ? src[s + 3] : 255;
+        // MuPDF restituisce i colori già moltiplicati per la trasparenza: li riporto a colori pieni
+        const k = al > 0 && al < 255 ? 255 / al : 1;
+        out[d] = src[s] * k; out[d + 1] = src[s + 1] * k; out[d + 2] = src[s + 2] * k; out[d + 3] = al;
+      }
+    }
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    canvas.getContext("2d")!.putImageData(new ImageData(out, w, h), 0, 0);
+    const x = pm.getX(), y = pm.getY();
+    return { url: canvas.toDataURL("image/png"), rect: [x / scale, y / scale, (x + w) / scale, (y + h) / scale] };
+  } finally {
+    pm.destroy();
+  }
 }

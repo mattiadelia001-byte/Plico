@@ -89,6 +89,26 @@ export async function writeInFolder(folder: string, name: string, bytes: Uint8Ar
   }
 }
 
+/**
+ * Condivide un file con il sistema: su Mac il foglio di condivisione (Mail, Messaggi, AirDrop…),
+ * su Windows mostra il file in Esplora risorse. `anchor` è il pulsante accanto a cui aprire il foglio.
+ * Restituisce false se la condivisione di sistema non è disponibile (browser senza supporto).
+ */
+export async function shareFile(bytes: Uint8Array, name: string, anchor: DOMRect): Promise<boolean> {
+  if (isTauri) {
+    const path = await tauriInvoke<string>("share_temp_path", { name });
+    await writePath(path, bytes);
+    await tauriInvoke<void>("share_file", { path, x: anchor.left, y: anchor.top, w: anchor.width, h: anchor.height });
+    return true;
+  }
+  const file = new File([bytes as BlobPart], name, { type: "application/pdf" });
+  if (navigator.canShare?.({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: name }); } catch { /* annullato */ }
+    return true;
+  }
+  return false;
+}
+
 export async function revealFolder(folder: string): Promise<void> {
   if (!isTauri) return;
   try {
