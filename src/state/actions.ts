@@ -2,7 +2,7 @@ import { PlicoDoc } from "../engine/plicoDoc";
 import * as A from "../engine/annotations";
 import * as T from "../engine/tools";
 import * as platform from "../platform";
-import { activeDoc, toast, useStore } from "./store";
+import { activeDoc, addRecent, removeRecent, toast, useStore } from "./store";
 import { viewerApi } from "./viewerApi";
 
 const st = () => useStore.getState();
@@ -15,11 +15,12 @@ export const stripPdf = (n: string) => n.replace(/\.pdf$/i, "");
 export async function openPicked(files: platform.PickedFile[]) {
   for (const f of files) {
     const existing = f.path ? st().docs.find((d) => d.path === f.path) : null;
-    if (existing) { activate(existing.id); continue; }
+    if (existing) { activate(existing.id); addRecent(f.path, f.name); continue; }
     try {
       const doc = PlicoDoc.open(f.bytes, f.name, f.path);
       st().patch({ docs: [...st().docs, doc] });
       activate(doc.id);
+      addRecent(f.path, f.name);
     } catch (e) {
       toast(`Impossibile aprire “${f.name}”: ${(e as Error).message}`);
     }
@@ -28,6 +29,16 @@ export async function openPicked(files: platform.PickedFile[]) {
 
 export async function openDialog() {
   openPicked(await platform.pickPdfs(true));
+}
+
+/** Riapre un file dall'elenco dei recenti; se non c'è più lo toglie dall'elenco. */
+export async function openRecent(path: string) {
+  try {
+    await openPicked([await platform.readPath(path)]);
+  } catch {
+    removeRecent(path);
+    toast("Il file non si trova più: l'ho tolto dai recenti");
+  }
 }
 
 export async function openPaths(paths: string[]) {
@@ -70,6 +81,7 @@ export async function saveDoc(doc: PlicoDoc, forceDialog = false): Promise<boole
     }
     if (!saved) return false;
     doc.markSaved(saved.path ?? undefined, saved.name);
+    addRecent(saved.path, saved.name);
     if (doc.id === st().activeId) platform.setWindowTitle(doc.name);
     toast("Salvato");
     return true;

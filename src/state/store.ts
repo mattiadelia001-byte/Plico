@@ -59,11 +59,40 @@ interface State {
   busy: string | null;
 
   signatures: Signature[];
+  recents: RecentFile[];
   signatureId: string | null;
 
   patch: (p: Partial<State>) => void;
   setTool: (t: ToolId) => void;
 }
+
+export interface RecentFile { path: string; name: string; openedAt: number }
+
+const MAX_RECENTS = 12;
+
+const loadRecents = (): RecentFile[] => {
+  try {
+    const list = JSON.parse(localStorage.getItem("plico.recents") ?? "[]");
+    return Array.isArray(list) ? list.filter((r) => r && typeof r.path === "string" && typeof r.name === "string").slice(0, MAX_RECENTS) : [];
+  } catch { return []; }
+};
+
+const storeRecents = (list: RecentFile[]) => {
+  try { localStorage.setItem("plico.recents", JSON.stringify(list)); } catch { /* non critico */ }
+  useStore.getState().patch({ recents: list });
+};
+
+/** Mette il file in cima ai recenti (solo se ha un percorso: nel browser di prova non ce l'ha). */
+export function addRecent(path: string | null | undefined, name: string) {
+  if (!path) return;
+  storeRecents([{ path, name, openedAt: Date.now() }, ...useStore.getState().recents.filter((r) => r.path !== path)].slice(0, MAX_RECENTS));
+}
+
+export function removeRecent(path: string) {
+  storeRecents(useStore.getState().recents.filter((r) => r.path !== path));
+}
+
+export const clearRecents = () => storeRecents([]);
 
 const loadSignatures = (): Signature[] => {
   try { return JSON.parse((localStorage.getItem("plico.signatures") ?? localStorage.getItem("folio.signatures") ?? "[]")); } catch { return []; }
@@ -99,6 +128,7 @@ export const useStore = create<State>((set, get) => ({
   busy: null,
 
   signatures: loadSignatures(),
+  recents: loadRecents(),
   signatureId: loadSignatures().slice(-1)[0]?.id ?? null,
 
   patch: (p) => set(p),

@@ -160,6 +160,23 @@ button { cursor: default; }
 .welcome p { margin: 0 0 14px; color: var(--muted); font-size: 15px; }
 .welcome small { margin-top: 14px; color: var(--muted); }
 .welcome-actions { display: flex; gap: 10px; }
+.welcome.has-recents { justify-content: flex-start; padding-top: 7vh; padding-bottom: 0; overflow: auto; }
+.recents { width: min(560px, calc(100% - 48px)); margin-top: 34px; padding-bottom: 28px; }
+.recents header { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; padding: 0 4px; }
+.recents h2 { margin: 0; font-size: 13px; font-weight: 600; color: var(--muted); }
+.recents button.link { border: none; background: none; padding: 0; color: var(--accent); font-size: 12.5px; }
+.recents ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.recents li { position: relative; display: flex; align-items: center; }
+.recents button.recent { flex: 1; min-width: 0; border: none; background: transparent; border-radius: 9px; padding: 8px 40px 8px 10px; gap: 12px; text-align: left; color: var(--text); }
+.recents button.recent:hover:not(:disabled) { background: var(--hover); filter: none; }
+.recents .recent svg { flex: none; color: var(--accent); }
+.recents .recent .grow { min-width: 0; display: flex; flex-direction: column; }
+.recents .recent strong { font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recents .recent small { margin: 0; color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recents .recent .when { flex: none; color: var(--muted); font-size: 12px; }
+.recents .forget { position: absolute; right: 8px; opacity: 0; }
+.recents li:hover .forget, .recents .forget:focus-visible { opacity: 1; }
+.recents li:hover .when { visibility: hidden; }
 .logo { width: 108px; height: 108px; margin-bottom: -8px; user-select: none; }
 .locked { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: var(--muted); }
 .locked h2 { margin: 0; color: var(--text); font-size: 17px; }

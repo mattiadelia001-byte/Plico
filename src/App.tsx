@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
-import { FilePlus2, FolderOpen, Lock, Merge, Minimize2 } from "lucide-react";
-import { activeDoc, toast, useStore } from "./state/store";
+import { FilePlus2, FolderOpen, FileText, Lock, Merge, Minimize2, X } from "lucide-react";
+import { activeDoc, clearRecents, removeRecent, toast, useStore } from "./state/store";
 import * as act from "./state/actions";
 import * as platform from "./platform";
 import { isMac, isTauri } from "./platform";
@@ -84,10 +84,19 @@ export function App() {
   );
 }
 
+const dayLabel = (t: number) => {
+  const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(t).setHours(0, 0, 0, 0)) / 86400000);
+  if (days <= 0) return "oggi";
+  if (days === 1) return "ieri";
+  return new Date(t).toLocaleDateString("it-IT", { day: "numeric", month: "short", year: days > 300 ? "numeric" : undefined });
+};
+const parentFolder = (p: string) => p.split(/[\\/]/).slice(0, -1).pop() ?? "";
+
 function Welcome() {
   const patch = useStore((s) => s.patch);
+  const recents = useStore((s) => s.recents);
   return (
-    <div className="welcome" data-testid="welcome">
+    <div className={"welcome" + (recents.length ? " has-recents" : "")} data-testid="welcome">
       <img className="logo" src={appIcon} alt="" draggable={false} />
       <h1>Plico</h1>
       <p>Leggi, annota e riorganizza i tuoi PDF.</p>
@@ -97,7 +106,23 @@ function Welcome() {
         <button onClick={() => patch({ dialog: "compress" })} data-testid="welcome-compress"><Minimize2 size={17} /> Comprimi PDF</button>
         <button onClick={act.newDocument}><FilePlus2 size={17} /> Nuovo documento</button>
       </div>
-      <small>Oppure trascina qui un file.</small>
+      {recents.length > 0 ? (
+        <section className="recents" data-testid="recents">
+          <header><h2>Recenti</h2><button className="link" onClick={clearRecents}>Svuota elenco</button></header>
+          <ul>
+            {recents.map((r) => (
+              <li key={r.path}>
+                <button className="recent" onClick={() => act.openRecent(r.path)} title={r.path} data-testid="recent-item">
+                  <FileText size={20} />
+                  <span className="grow"><strong>{r.name}</strong><small>{parentFolder(r.path)}</small></span>
+                  <span className="when">{dayLabel(r.openedAt)}</span>
+                </button>
+                <button className="mini forget" onClick={() => removeRecent(r.path)} title="Togli dai recenti"><X size={14} /></button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : <small>Oppure trascina qui un file.</small>}
     </div>
   );
 }
