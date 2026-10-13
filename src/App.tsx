@@ -10,7 +10,7 @@ import { MarkupBar } from "./components/MarkupBar";
 import { Viewer } from "./components/Viewer";
 import { Dialogs } from "./dialogs/Dialogs";
 import appIcon from "./assets/app-icon.png";
-import type { FolioDoc } from "./engine/folioDoc";
+import type { PDFolioDoc } from "./engine/pdfolioDoc";
 import { viewerApi } from "./state/viewerApi";
 
 export function App() {
@@ -88,7 +88,7 @@ function Welcome() {
   return (
     <div className="welcome" data-testid="welcome">
       <img className="logo" src={appIcon} alt="" draggable={false} />
-      <h1>Folio</h1>
+      <h1>PDFolio</h1>
       <p>Leggi, annota e riorganizza i tuoi PDF.</p>
       <div className="welcome-actions">
         <button className="primary" onClick={act.openDialog} data-testid="welcome-open"><FolderOpen size={17} /> Apri un PDF</button>
@@ -100,7 +100,7 @@ function Welcome() {
   );
 }
 
-function LockedView({ doc }: { doc: FolioDoc }) {
+function LockedView({ doc }: { doc: PDFolioDoc }) {
   const [pw, setPw] = useState("");
   const [wrong, setWrong] = useState(false);
   const submit = () => {
@@ -119,7 +119,7 @@ function LockedView({ doc }: { doc: FolioDoc }) {
   );
 }
 
-function StatusBar({ doc }: { doc: FolioDoc }) {
+function StatusBar({ doc }: { doc: PDFolioDoc }) {
   useDocVersion(doc);
   const page = useStore((s) => s.currentPage);
   const zoom = useStore((s) => s.zoom);

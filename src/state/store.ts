@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { FolioDoc, Quad, SearchHit } from "../engine/folioDoc";
+import type { PDFolioDoc, Quad, SearchHit } from "../engine/pdfolioDoc";
 import type { Signature } from "../engine/annotations";
 
 export type ToolId =
@@ -30,7 +30,7 @@ export interface SelectedAnnot {
 }
 
 interface State {
-  docs: FolioDoc[];
+  docs: PDFolioDoc[];
   activeId: string | null;
 
   sidebar: boolean;
@@ -116,7 +116,7 @@ export const useStore = create<State>((set, get) => ({
   },
 }));
 
-export const activeDoc = (s: { docs: FolioDoc[]; activeId: string | null }) =>
+export const activeDoc = (s: { docs: PDFolioDoc[]; activeId: string | null }) =>
   s.docs.find((d) => d.id === s.activeId) ?? null;
 
 export function saveSignatures(list: Signature[], selected: string | null) {

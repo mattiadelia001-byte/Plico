@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { FolioDoc, Point, Quad, Rect } from "../engine/folioDoc";
+import type { PDFolioDoc, Point, Quad, Rect } from "../engine/pdfolioDoc";
 import type { Pos } from "../engine/textModel";
 import * as A from "../engine/annotations";
 import { toast, useStore, type ToolId } from "../state/store";
@@ -41,7 +41,7 @@ function thin(pts: Point[], minDist: number): Point[] {
   return out;
 }
 
-export function PageOverlay(props: { doc: FolioDoc; index: number; S: number; w: number; h: number; version: number }) {
+export function PageOverlay(props: { doc: PDFolioDoc; index: number; S: number; w: number; h: number; version: number }) {
   const { doc, index, S, w, h, version } = props;
   const store = useStore;
   const tool = useStore((s) => s.tool);

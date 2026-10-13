@@ -1,11 +1,11 @@
 [package]
-name = "folio"
+name = "pdfolio"
 version = "1.0.0"
-description = "Folio: lettore ed editor di PDF"
+description = "PDFolio: lettore ed editor di PDF"
 edition = "2021"
 
 [lib]
-name = "folio_lib"
+name = "pdfolio_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

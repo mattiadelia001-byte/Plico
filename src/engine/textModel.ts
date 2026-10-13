@@ -1,5 +1,5 @@
 import type * as mupdf from "mupdf";
-import type { Quad } from "./folioDoc";
+import type { Quad } from "./pdfolioDoc";
 
 export interface Ch { c: string; x0: number; x1: number; y0: number; y1: number }
 export interface TLine { chars: Ch[]; x0: number; x1: number; y0: number; y1: number }

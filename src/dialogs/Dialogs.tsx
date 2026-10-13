@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, FilePlus2, Trash2 } from "lucide-react";
-import { FolioDoc, uid } from "../engine/folioDoc";
+import { PDFolioDoc, uid } from "../engine/pdfolioDoc";
 import * as T from "../engine/tools";
 import type { Signature } from "../engine/annotations";
 import * as platform from "../platform";
@@ -31,7 +31,7 @@ const Footer = (p: { children: React.ReactNode }) => <div className="modal-foote
 
 // ---------- Dividi ----------
 
-function SplitDialog({ doc, onClose }: { doc: FolioDoc; onClose: () => void }) {
+function SplitDialog({ doc, onClose }: { doc: PDFolioDoc; onClose: () => void }) {
   const [mode, setMode] = useState<"single" | "every" | "ranges">("single");
   const [every, setEvery] = useState(2);
   const [ranges, setRanges] = useState("");
@@ -73,7 +73,7 @@ function SplitDialog({ doc, onClose }: { doc: FolioDoc; onClose: () => void }) {
 
 // ---------- Riduci dimensioni ----------
 
-function CompressDialog({ doc, onClose }: { doc: FolioDoc; onClose: () => void }) {
+function CompressDialog({ doc, onClose }: { doc: PDFolioDoc; onClose: () => void }) {
   const [preset, setPreset] = useState<T.CompressionPreset["id"]>("media");
   const [progress, setProgress] = useState<[number, number] | null>(null);
   const [result, setResult] = useState("");
@@ -111,7 +111,7 @@ const fmt = (n: number) => (n > 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${
 
 // ---------- Password ----------
 
-function ProtectDialog({ doc, onClose }: { doc: FolioDoc; onClose: () => void }) {
+function ProtectDialog({ doc, onClose }: { doc: PDFolioDoc; onClose: () => void }) {
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
   const [error, setError] = useState("");
@@ -135,7 +135,7 @@ function ProtectDialog({ doc, onClose }: { doc: FolioDoc; onClose: () => void })
 
 // ---------- Proprietà ----------
 
-function InfoDialog({ doc, onClose }: { doc: FolioDoc; onClose: () => void }) {
+function InfoDialog({ doc, onClose }: { doc: PDFolioDoc; onClose: () => void }) {
   const [v, setV] = useState({
     "info:Title": doc.getMeta("info:Title"), "info:Author": doc.getMeta("info:Author"),
     "info:Subject": doc.getMeta("info:Subject"), "info:Keywords": doc.getMeta("info:Keywords"),
@@ -158,7 +158,7 @@ function InfoDialog({ doc, onClose }: { doc: FolioDoc; onClose: () => void }) {
 
 // ---------- Immagini ----------
 
-function ImagesDialog({ doc, onClose }: { doc: FolioDoc; onClose: () => void }) {
+function ImagesDialog({ doc, onClose }: { doc: PDFolioDoc; onClose: () => void }) {
   const [format, setFormat] = useState<T.ImageFormat>("png");
   const [dpi, setDpi] = useState(150);
   const [onlySel, setOnlySel] = useState(false);
@@ -300,7 +300,7 @@ function MergeDialog({ onClose }: { onClose: () => void }) {
     setBusy(true); setError("");
     try {
       const bytes = await T.merge(items);
-      const doc = FolioDoc.open(bytes, "PDF unito.pdf");
+      const doc = PDFolioDoc.open(bytes, "PDF unito.pdf");
       doc.dirty = true;
       useStore.getState().patch({ docs: [...useStore.getState().docs, doc], dialog: null });
       act.activate(doc.id);

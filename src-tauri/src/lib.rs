@@ -90,7 +90,7 @@ pub fn run() {
             exit_app
         ])
         .build(tauri::generate_context!())
-        .expect("errore durante l'avvio di Folio");
+        .expect("errore durante l'avvio di PDFolio");
 
     app.run(|handle, event| {
         // su macOS i file aperti dal Finder arrivano come evento, non come argomenti

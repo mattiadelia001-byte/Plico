@@ -1,4 +1,4 @@
-import { FolioDoc } from "../engine/folioDoc";
+import { PDFolioDoc } from "../engine/pdfolioDoc";
 import * as A from "../engine/annotations";
 import * as T from "../engine/tools";
 import * as platform from "../platform";
@@ -17,7 +17,7 @@ export async function openPicked(files: platform.PickedFile[]) {
     const existing = f.path ? st().docs.find((d) => d.path === f.path) : null;
     if (existing) { activate(existing.id); continue; }
     try {
-      const doc = FolioDoc.open(f.bytes, f.name, f.path);
+      const doc = PDFolioDoc.open(f.bytes, f.name, f.path);
       st().patch({ docs: [...st().docs, doc] });
       activate(doc.id);
     } catch (e) {
@@ -40,7 +40,7 @@ export async function openPaths(paths: string[]) {
 }
 
 export function newDocument() {
-  const doc = FolioDoc.blank(`Senza titolo ${st().docs.filter((d) => !d.path).length + 1}`);
+  const doc = PDFolioDoc.blank(`Senza titolo ${st().docs.filter((d) => !d.path).length + 1}`);
   st().patch({ docs: [...st().docs, doc] });
   activate(doc.id);
 }
@@ -58,7 +58,7 @@ export function activate(id: string) {
   requestAnimationFrame(() => viewerApi.scrollToPage(page));
 }
 
-export async function saveDoc(doc: FolioDoc, forceDialog = false): Promise<boolean> {
+export async function saveDoc(doc: PDFolioDoc, forceDialog = false): Promise<boolean> {
   try {
     let saved: platform.Saved | null;
     const bytes = doc.toBytes();
@@ -92,7 +92,7 @@ export async function closeDoc(id: string): Promise<boolean> {
   if (st().activeId === id) {
     const next = rest[rest.length - 1];
     if (next) activate(next.id);
-    else { st().patch({ activeId: null, hits: [], searchQuery: "" }); platform.setWindowTitle("Folio"); }
+    else { st().patch({ activeId: null, hits: [], searchQuery: "" }); platform.setWindowTitle("PDFolio"); }
   }
   return true;
 }
@@ -111,7 +111,7 @@ export async function confirmCloseAll(): Promise<boolean> {
 
 // ---------- pagine ----------
 
-export function targetPages(doc: FolioDoc): number[] {
+export function targetPages(doc: PDFolioDoc): number[] {
   const { selectedPages, currentPage } = st();
   const valid = selectedPages.filter((p) => p < doc.pageCount).sort((a, b) => a - b);
   return valid.length ? valid : [Math.min(currentPage, doc.pageCount - 1)];

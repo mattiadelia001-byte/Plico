@@ -1,4 +1,4 @@
-name: Compila Folio
+name: Compila PDFolio
 
 # Si avvia a mano dalla scheda "Actions" di GitHub, oppure creando un tag che inizia con "v" (es. v1.0.0).
 on:
@@ -44,12 +44,12 @@ jobs:
 
       - name: Comprimi l'app per macOS
         if: matrix.os == 'macos-latest'
-        run: ditto -c -k --keepParent src-tauri/target.noindex/release/bundle/macos/Folio.app Folio-mac.zip
+        run: ditto -c -k --keepParent src-tauri/target.noindex/release/bundle/macos/PDFolio.app PDFolio-mac.zip
 
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'windows-latest'
         with:
-          name: Folio-windows
+          name: PDFolio-windows
           path: |
             src-tauri/target.noindex/release/bundle/nsis/*.exe
             src-tauri/target.noindex/release/bundle/msi/*.msi
@@ -57,5 +57,5 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: matrix.os == 'macos-latest'
         with:
-          name: Folio-mac
-          path: Folio-mac.zip
+          name: PDFolio-mac
+          path: PDFolio-mac.zip

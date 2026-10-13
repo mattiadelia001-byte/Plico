@@ -1,7 +1,7 @@
 import type React from "react";
 import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { ChevronDown, ChevronUp, FileSearch, Grid2x2, ListTree, MessageSquareText } from "lucide-react";
-import type { FolioDoc, OutlineEntry } from "../engine/folioDoc";
+import type { PDFolioDoc, OutlineEntry } from "../engine/pdfolioDoc";
 import * as A from "../engine/annotations";
 import { fromFile } from "../platform";
 import { useStore, type SidebarMode } from "../state/store";
@@ -17,7 +17,7 @@ const MODES: { id: SidebarMode; title: string; icon: React.ReactElement }[] = [
   { id: "search", title: "Risultati della ricerca", icon: <FileSearch size={16} /> },
 ];
 
-export function Sidebar({ doc }: { doc: FolioDoc }) {
+export function Sidebar({ doc }: { doc: PDFolioDoc }) {
   const mode = useStore((s) => s.sidebarMode);
   const patch = useStore((s) => s.patch);
   return (
@@ -37,7 +37,7 @@ export function Sidebar({ doc }: { doc: FolioDoc }) {
 
 // ---------------- miniature ----------------
 
-function Thumbnails({ doc }: { doc: FolioDoc }) {
+function Thumbnails({ doc }: { doc: PDFolioDoc }) {
   useDocVersion(doc);
   const selected = useStore((s) => s.selectedPages);
   const current = useStore((s) => s.currentPage);
@@ -88,7 +88,7 @@ function Thumbnails({ doc }: { doc: FolioDoc }) {
   const onDragStart = (e: DragEvent, i: number) => {
     const pages = selected.includes(i) ? [...selected].sort((a, b) => a - b) : [i];
     if (!selected.includes(i)) patch({ selectedPages: [i] });
-    e.dataTransfer.setData("application/x-folio-pages", JSON.stringify(pages));
+    e.dataTransfer.setData("application/x-pdfolio-pages", JSON.stringify(pages));
     e.dataTransfer.effectAllowed = "move";
   };
 
@@ -103,7 +103,7 @@ function Thumbnails({ doc }: { doc: FolioDoc }) {
     e.stopPropagation(); // il rilascio non deve risalire al contenitore e ripetersi
     const at = dropAt ?? n;
     setDropAt(null);
-    const raw = e.dataTransfer.getData("application/x-folio-pages");
+    const raw = e.dataTransfer.getData("application/x-pdfolio-pages");
     if (raw) { act.reorderPages(JSON.parse(raw), at); return; }
     const files = Array.from(e.dataTransfer.files).filter((f) => /\.pdf$/i.test(f.name));
     if (files.length) { e.stopPropagation(); act.insertFromPdfs(await Promise.all(files.map(fromFile)), at); }
@@ -126,7 +126,7 @@ function Thumbnails({ doc }: { doc: FolioDoc }) {
 }
 
 function Thumb(props: {
-  doc: FolioDoc; index: number; selected: boolean; current: boolean;
+  doc: PDFolioDoc; index: number; selected: boolean; current: boolean;
   onClick: (e: React.MouseEvent) => void; onContext: (e: React.MouseEvent) => void;
   onDragStart: (e: DragEvent) => void; onDragEnd: () => void;
 }) {
@@ -171,7 +171,7 @@ function Thumb(props: {
 
 // ---------------- indice ----------------
 
-function Outline({ doc }: { doc: FolioDoc }) {
+function Outline({ doc }: { doc: PDFolioDoc }) {
   const items = useMemo(() => doc.outline(), [doc, doc.structVersion]);
   if (!items.length) return <div className="empty"><ListTree size={28} /><p>Questo PDF non ha un indice.</p></div>;
   return <div className="outline"><OutlineList items={items} depth={0} /></div>;
@@ -199,7 +199,7 @@ const KIND: Record<string, string> = {
   Square: "Rettangolo", Circle: "Ovale", Line: "Linea", Ink: "Disegno", FreeText: "Testo", Text: "Nota",
 };
 
-function AnnotList({ doc }: { doc: FolioDoc }) {
+function AnnotList({ doc }: { doc: PDFolioDoc }) {
   useDocVersion(doc);
   const selected = useStore((s) => s.selectedAnnot);
   const items = [];

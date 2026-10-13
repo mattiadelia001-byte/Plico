@@ -1,5 +1,5 @@
 {
-  "name": "folio-desktop",
+  "name": "pdfolio",
   "private": true,
   "version": "1.0.0",
   "type": "module",
@@ -8,7 +8,7 @@
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "build:mac": "tauri build --bundles app && codesign --force --deep -s - src-tauri/target.noindex/release/bundle/macos/Folio.app"
+    "build:mac": "tauri build --bundles app && codesign --force --deep -s - src-tauri/target.noindex/release/bundle/macos/PDFolio.app"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.12.3",
