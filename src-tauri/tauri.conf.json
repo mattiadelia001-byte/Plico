@@ -46,6 +46,7 @@
         "role": "Editor"
       }
     ],
+    "macOS": { "signingIdentity": "-" },
     "windows": {
       "nsis": { "languages": ["Italian", "English"], "displayLanguageSelector": false }
     }

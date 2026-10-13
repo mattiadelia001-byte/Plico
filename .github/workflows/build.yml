@@ -1,6 +1,8 @@
 name: Compila Plico
 
-# Si avvia a mano dalla scheda "Actions" di GitHub, oppure creando un tag che inizia con "v" (es. v1.0.0).
+# Si avvia a mano dalla scheda "Actions" di GitHub (i file restano scaricabili da lì per qualche giorno),
+# oppure creando un tag che inizia con "v" (es. v1.0.0): in quel caso i file vengono anche
+# pubblicati nella pagina "Releases", con nomi fissi usati dal sito di download.
 on:
   workflow_dispatch:
   push:
@@ -15,7 +17,7 @@ jobs:
           - os: windows-latest
             label: windows
           - os: macos-latest
-            label: mac-apple-silicon
+            label: mac
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -26,6 +28,8 @@ jobs:
           cache: npm
 
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.os == 'macos-latest' && 'aarch64-apple-darwin,x86_64-apple-darwin' || '' }}
 
       - uses: swatinem/rust-cache@v2
         with:
@@ -33,29 +37,53 @@ jobs:
 
       - run: npm ci
 
-      # su macOS creo solo l'app (il .dmg richiede una sessione grafica)
+      # Windows: installer .exe
       - name: Compila (Windows)
         if: matrix.os == 'windows-latest'
-        run: npx tauri build
+        run: npx tauri build --bundles nsis
 
+      # Mac: .dmg "universale", funziona sia sui Mac con chip Apple sia su quelli Intel
       - name: Compila (macOS)
         if: matrix.os == 'macos-latest'
-        run: npx tauri build --bundles app
+        run: npx tauri build --target universal-apple-darwin --bundles dmg
 
-      - name: Comprimi l'app per macOS
-        if: matrix.os == 'macos-latest'
-        run: ditto -c -k --keepParent src-tauri/target.noindex/release/bundle/macos/Plico.app Plico-mac.zip
-
-      - uses: actions/upload-artifact@v4
+      # Nomi fissi, così il sito può puntare sempre a .../releases/latest/download/<nome>
+      - name: Rinomina i file (Windows)
         if: matrix.os == 'windows-latest'
-        with:
-          name: Plico-windows
-          path: |
-            src-tauri/target.noindex/release/bundle/nsis/*.exe
-            src-tauri/target.noindex/release/bundle/msi/*.msi
+        shell: bash
+        run: |
+          mkdir out
+          cp src-tauri/target.noindex/release/bundle/nsis/*.exe out/Plico-windows-setup.exe
+
+      - name: Rinomina i file (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          mkdir out
+          cp src-tauri/target.noindex/universal-apple-darwin/release/bundle/dmg/*.dmg out/Plico-mac.dmg
 
       - uses: actions/upload-artifact@v4
-        if: matrix.os == 'macos-latest'
         with:
-          name: Plico-mac
-          path: Plico-mac.zip
+          name: Plico-${{ matrix.label }}
+          path: out/*
+
+  # Solo con un tag "v…": pubblica i file nella pagina Releases
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: out
+          merge-multiple: true
+
+      - name: Pubblica la release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ github.ref_name }}" out/* \
+            --repo "${{ github.repository }}" \
+            --title "Plico ${{ github.ref_name }}" \
+            --generate-notes
