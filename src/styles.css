@@ -159,6 +159,7 @@ button { cursor: default; }
 .welcome h1 { margin: 6px 0 0; font-size: 30px; font-weight: 650; letter-spacing: -0.02em; }
 .welcome p { margin: 0 0 14px; color: var(--muted); font-size: 15px; }
 .welcome small { margin-top: 14px; color: var(--muted); }
+.welcome button.link.default-app { margin-top: 14px; border: none; background: none; padding: 0; color: var(--accent); font-size: 12.5px; cursor: pointer; }
 .welcome-actions { display: flex; gap: 10px; }
 .welcome.has-recents { justify-content: flex-start; padding-top: 7vh; padding-bottom: 0; overflow: auto; }
 .recents { width: min(560px, calc(100% - 48px)); margin-top: 34px; padding-bottom: 28px; }

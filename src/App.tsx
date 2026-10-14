@@ -24,6 +24,8 @@ export function App() {
 
   useShortcuts();
 
+  useEffect(() => { act.offerDefaultPdfApp(); }, []);
+
   useEffect(() => {
     let off: (() => void)[] = [];
     platform.onOpenFiles(act.openPaths).then((u) => off.push(u));
@@ -95,6 +97,11 @@ const parentFolder = (p: string) => p.split(/[\\/]/).slice(0, -1).pop() ?? "";
 function Welcome() {
   const patch = useStore((s) => s.patch);
   const recents = useStore((s) => s.recents);
+  const [isDefault, setIsDefault] = useState<boolean | null>(true);
+  useEffect(() => {
+    if (isTauri) platform.isDefaultPdfApp().then(setIsDefault).catch(() => setIsDefault(true));
+  }, []);
+  const offerDefault = isTauri && isDefault !== true;
   return (
     <div className={"welcome" + (recents.length ? " has-recents" : "")} data-testid="welcome">
       <img className="logo" src={appIcon} alt="" draggable={false} />
@@ -123,6 +130,11 @@ function Welcome() {
           </ul>
         </section>
       ) : <small>Oppure trascina qui un file.</small>}
+      {offerDefault && (
+        <button className="link default-app" onClick={async () => { await act.makeDefaultPdfApp(); platform.isDefaultPdfApp().then(setIsDefault); }} data-testid="make-default">
+          Usa Plico per aprire tutti i PDF
+        </button>
+      )}
     </div>
   );
 }

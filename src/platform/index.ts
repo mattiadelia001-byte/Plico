@@ -199,3 +199,14 @@ export async function printPage() {
   if (isTauri) await tauriInvoke("print_page");
   else window.print();
 }
+
+/** Vero se Plico è già l'app predefinita per i PDF; null se non si può sapere (Windows, browser). */
+export async function isDefaultPdfApp(): Promise<boolean | null> {
+  if (!isTauri) return null;
+  return tauriInvoke<boolean | null>("is_default_pdf_app");
+}
+
+/** Su Mac imposta Plico come app dei PDF; su Windows apre le Impostazioni dove sceglierla. */
+export async function setDefaultPdfApp(): Promise<void> {
+  if (isTauri) await tauriInvoke<void>("set_default_pdf_app");
+}

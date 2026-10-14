@@ -95,7 +95,7 @@ export function removeRecent(path: string) {
 export const clearRecents = () => storeRecents([]);
 
 const loadSignatures = (): Signature[] => {
-  try { return JSON.parse((localStorage.getItem("plico.signatures") ?? localStorage.getItem("folio.signatures") ?? "[]")); } catch { return []; }
+  try { return JSON.parse((localStorage.getItem("plico.signatures") ?? "[]")); } catch { return []; }
 };
 
 export const useStore = create<State>((set, get) => ({

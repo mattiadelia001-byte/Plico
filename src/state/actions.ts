@@ -307,3 +307,35 @@ export async function printDoc() {
     st().patch({ busy: null });
   }
 }
+
+// ---------- app predefinita per i PDF ----------
+
+/** Imposta Plico come app dei PDF (su Mac subito, su Windows apre le Impostazioni dove sceglierla). */
+export async function makeDefaultPdfApp() {
+  try {
+    await platform.setDefaultPdfApp();
+    if (platform.isMac) {
+      toast((await platform.isDefaultPdfApp()) ? "Ora i PDF si aprono con Plico" : "Il Mac non ha cambiato l'app: riprova dalle Informazioni del file", 4000);
+    } else {
+      toast("Nelle Impostazioni scegli Plico per i file .pdf", 6000);
+    }
+  } catch (e) {
+    toast(`Non sono riuscito a cambiare l'app dei PDF: ${(e as Error)?.message ?? e}`, 5000);
+  }
+}
+
+/** Al primo avvio chiede (una volta sola) se usare Plico per tutti i PDF. */
+export async function offerDefaultPdfApp() {
+  if (!platform.isTauri) return;
+  try {
+    if (localStorage.getItem("plico.askedDefault")) return;
+    if ((await platform.isDefaultPdfApp()) === true) return;
+    localStorage.setItem("plico.askedDefault", "1");
+  } catch { return; }
+  const ok = await platform.confirmDialog(
+    "Vuoi usare Plico per aprire tutti i PDF?\n\nPuoi cambiare idea quando vuoi dalla schermata iniziale.",
+    platform.isMac ? "Usa Plico" : "Scegli nelle Impostazioni",
+    "Non ora",
+  );
+  if (ok) await makeDefaultPdfApp();
+}
