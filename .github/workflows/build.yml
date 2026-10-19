@@ -82,8 +82,10 @@ jobs:
       - name: Pubblica la release
         env:
           GH_TOKEN: ${{ github.token }}
+        # se la release esiste già (tag spostato per ripubblicare la stessa versione), sostituisce i file
         run: |
           gh release create "${{ github.ref_name }}" out/* \
             --repo "${{ github.repository }}" \
             --title "Plico ${{ github.ref_name }}" \
-            --generate-notes
+            --generate-notes \
+          || gh release upload "${{ github.ref_name }}" out/* --repo "${{ github.repository }}" --clobber
