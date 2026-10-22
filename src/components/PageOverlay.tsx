@@ -6,6 +6,7 @@ import { toast, useStore, type ToolId } from "../state/store";
 import { styleOf } from "../state/actions";
 import { viewerApi } from "../state/viewerApi";
 import { openExternal } from "../platform";
+import { dataUrlToBytes, defaultSignatureWidth, signaturePath, tintedImage } from "../engine/signature";
 import { ContextMenu, type MenuItem } from "./ui";
 
 type Drag =
@@ -51,12 +52,29 @@ export function PageOverlay(props: { doc: PlicoDoc; index: number; S: number; w:
   const selectedAnnot = useStore((s) => s.selectedAnnot);
   const hits = useStore((s) => s.hits);
   const hitIndex = useStore((s) => s.hitIndex);
+  const signatures = useStore((s) => s.signatures);
+  const signatureId = useStore((s) => s.signatureId);
 
   const layerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<Drag | null>(null);
   const [drag, setDragState] = useState<Drag | null>(null);
   const [editor, setEditor] = useState<Editor | null>(null);
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuItem[] } | null>(null);
+
+  // la firma scelta segue il cursore prima di essere posata
+  const sig = signatures.find((x) => x.id === signatureId) ?? signatures[signatures.length - 1];
+  const [hover, setHover] = useState<Point | null>(null);
+  const [ghostUrl, setGhostUrl] = useState("");
+  useEffect(() => {
+    if (tool !== "signature") { setHover(null); return; }
+    if (sig?.image) tintedImage(sig, color).then(setGhostUrl).catch(() => setGhostUrl(""));
+  }, [tool, sig, color]);
+  const sigWidth = defaultSignatureWidth(w);
+  /** Centro della firma tenuto dentro la pagina. */
+  const sigCenter = (p: Point): Point => {
+    const sh = sigWidth / Math.max(sig?.aspect ?? 1, 0.1);
+    return [Math.min(Math.max(p[0], sigWidth / 2), w - sigWidth / 2), Math.min(Math.max(p[1], sh / 2), h - sh / 2)];
+  };
 
   const setDrag = (d: Drag | null) => { dragRef.current = d; setDragState(d); };
 
@@ -138,7 +156,10 @@ export function PageOverlay(props: { doc: PlicoDoc; index: number; S: number; w:
 
   function onPointerMove(e: React.PointerEvent) {
     const d = dragRef.current;
-    if (!d) return;
+    if (!d) {
+      if (store.getState().tool === "signature" && e.pointerType !== "touch") setHover(toPage(e));
+      return;
+    }
     const p = toPage(e);
     if (d.kind === "create") {
       const last = d.pts[d.pts.length - 1];
@@ -155,7 +176,15 @@ export function PageOverlay(props: { doc: PlicoDoc; index: number; S: number; w:
       }
       setDrag({ ...d, dx, dy, moved, sprite });
     } else if (d.kind === "resize") {
-      setDrag({ ...d, next: [d.orig[0], d.orig[1], Math.max(d.orig[0] + 6, p[0]), Math.max(d.orig[1] + 6, p[1])] });
+      const [ox, oy] = [d.orig[0], d.orig[1]];
+      if (selectedRef && selectedRef.id === d.id && A.keepsAspect(selectedRef)) {
+        // le firme non si deformano: la scala segue il cursore
+        const [ow, oh] = [d.orig[2] - ox, d.orig[3] - oy];
+        const k = Math.max((p[0] - ox) / ow, (p[1] - oy) / oh, 12 / Math.max(ow, oh));
+        setDrag({ ...d, next: [ox, oy, ox + ow * k, oy + oh * k] });
+      } else {
+        setDrag({ ...d, next: [ox, oy, Math.max(ox + 6, p[0]), Math.max(oy + 6, p[1])] });
+      }
     } else {
       const moved = d.moved || Math.hypot(p[0] - d.start[0], p[1] - d.start[1]) * S > 3;
       let { quads, text } = d;
@@ -267,10 +296,19 @@ export function PageOverlay(props: { doc: PlicoDoc; index: number; S: number; w:
         setEditor({ mode: "note", at: d.start, initial: "", fontSize: 13, color: st.color });
         break;
       case "signature": {
-        const sig = st.signatures.find((x) => x.id === st.signatureId) ?? st.signatures[st.signatures.length - 1];
-        if (!sig) { st.patch({ dialog: "signature" }); break; }
-        done(A.createSignature(doc, index, sig, p, 150, st.color));
-        revert();
+        const sg = st.signatures.find((x) => x.id === st.signatureId) ?? st.signatures[st.signatures.length - 1];
+        if (!sg) { st.patch({ dialog: "signature" }); break; }
+        const at = sigCenter(p);
+        setHover(null);
+        if (sg.image) {
+          tintedImage(sg, st.color).then((url) => {
+            done(A.createSignatureImage(doc, index, dataUrlToBytes(url), sg.aspect, at, sigWidth));
+            revert();
+          }).catch(() => toast("Non riesco a inserire la firma"));
+        } else {
+          done(A.createSignature(doc, index, sg, at, sigWidth, st.color));
+          revert();
+        }
         break;
       }
       case "crop":
@@ -332,7 +370,7 @@ export function PageOverlay(props: { doc: PlicoDoc; index: number; S: number; w:
 
   // ---------- disegno ----------
 
-  const cursor = tool === "select" || isTextMarkupTool(tool) ? (tool === "select" ? "default" : "text") : tool === "text" ? "text" : "crosshair";
+  const cursor = tool === "signature" && sig && hover ? "none" : tool === "select" || isTextMarkupTool(tool) ? (tool === "select" ? "default" : "text") : tool === "text" ? "text" : "crosshair";
   const sw = (px: number) => px / S; // spessore costante a schermo
 
   const preview = drag && drag.kind === "create" ? (() => {
@@ -376,6 +414,19 @@ export function PageOverlay(props: { doc: PlicoDoc; index: number; S: number; w:
         {selection?.page === index && selection.quads.map((q, k) => <polygon key={k} points={polygon(q)} fill="rgba(10,132,255,.32)" />)}
         {drag?.kind === "select-text" && drag.quads.map((q, k) => <polygon key={k} points={polygon(q)} fill="rgba(10,132,255,.32)" />)}
         {preview}
+        {tool === "signature" && sig && hover && !drag && (() => {
+          const gw = sigWidth, gh = gw / Math.max(sig.aspect, 0.1);
+          const [cx, cy] = sigCenter(hover);
+          const x = cx - gw / 2, y = cy - gh / 2;
+          return (
+            <g opacity={0.7} pointerEvents="none" data-testid="signature-ghost">
+              <rect x={x - sw(3)} y={y - sw(3)} width={gw + sw(6)} height={gh + sw(6)} fill="none" stroke="var(--accent)" strokeWidth={sw(1)} strokeDasharray={`${sw(4)} ${sw(3)}`} />
+              {sig.image
+                ? ghostUrl && <image href={ghostUrl} x={x} y={y} width={gw} height={gh} />
+                : <path d={signaturePath(sig, x, y, gw, gh)} fill="none" stroke={color} strokeWidth={A.signatureStrokeWidth(gw)} strokeLinecap="round" strokeLinejoin="round" />}
+            </g>
+          );
+        })()}
         {drag?.kind === "move" && drag.sprite && (
           <image href={drag.sprite.url} x={drag.sprite.rect[0] + drag.dx} y={drag.sprite.rect[1] + drag.dy}
             width={drag.sprite.rect[2] - drag.sprite.rect[0]} height={drag.sprite.rect[3] - drag.sprite.rect[1]} data-testid="move-sprite" />
@@ -398,6 +449,7 @@ export function PageOverlay(props: { doc: PlicoDoc; index: number; S: number; w:
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
         onPointerCancel={cancelDrag}
+        onPointerLeave={() => setHover(null)}
         onContextMenu={onContextMenu}
         data-testid={`page-${index}`}
       />

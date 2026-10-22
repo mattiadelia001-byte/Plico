@@ -11,10 +11,12 @@ export interface Style {
 
 export interface Signature {
   id: string;
-  /** Tratti normalizzati nel riquadro 0..1 (y verso il basso). */
+  /** Tratti normalizzati nel riquadro 0..1 (y verso il basso). Vuoti se la firma è un'immagine. */
   strokes: Point[][];
   /** larghezza / altezza */
   aspect: number;
+  /** Firma da foto: PNG (data URL) con inchiostro nero su sfondo trasparente. */
+  image?: string;
 }
 
 export function hexToRgb(hex: string): RGB {
@@ -36,10 +38,13 @@ export type MarkupKind = "Highlight" | "Underline" | "StrikeOut";
 export type ShapeKind = "Square" | "Circle";
 
 /** Tipi che l'utente può selezionare, spostare ed eliminare. */
-const EDITABLE = new Set(["Highlight", "Underline", "StrikeOut", "Squiggly", "Square", "Circle", "Line", "Ink", "FreeText", "Text"]);
+export const SIGNATURE_LABEL = "Firma";
+const EDITABLE = new Set(["Highlight", "Underline", "StrikeOut", "Squiggly", "Square", "Circle", "Line", "Ink", "FreeText", "Text", "Stamp"]);
 export const isEditable = (type: string) => EDITABLE.has(type);
 export const isMarkup = (type: string) => type === "Highlight" || type === "Underline" || type === "StrikeOut" || type === "Squiggly";
-export const isResizable = (type: string) => type === "Square" || type === "Circle" || type === "FreeText" || type === "Ink";
+export const isResizable = (type: string) => type === "Square" || type === "Circle" || type === "FreeText" || type === "Ink" || type === "Stamp";
+/** Le firme si ridimensionano senza deformarsi. */
+export const keepsAspect = (ref: { type: string; contents: string }) => ref.type === "Stamp" || ref.contents === SIGNATURE_LABEL;
 export const isMovable = (type: string) => !isMarkup(type);
 
 export interface AnnotRef {
@@ -249,12 +254,13 @@ export function createLine(doc: PlicoDoc, page: number, p1: Point, p2: Point, ar
   });
 }
 
-export function createInk(doc: PlicoDoc, page: number, strokes: Point[][], style: Style, name = "Disegno"): number {
+export function createInk(doc: PlicoDoc, page: number, strokes: Point[][], style: Style, name = "Disegno", contents?: string): number {
   return doc.run(name, () => {
     const a = doc.page(page).createAnnotation("Ink");
     a.setColor(hexToRgb(style.color));
     a.setBorderWidth(style.width);
     a.setInkList(strokes);
+    if (contents) a.setContents(contents);
     a.update();
     return objId(a);
   });
@@ -283,11 +289,27 @@ export function createFreeText(doc: PlicoDoc, page: number, topLeft: Point, text
   });
 }
 
+/** Spessore del tratto di una firma disegnata, in proporzione alla sua larghezza. */
+export const signatureStrokeWidth = (width: number) => Math.max(1.4, width / 80);
+
 export function createSignature(doc: PlicoDoc, page: number, sig: Signature, center: Point, width: number, color: string): number {
   const height = width / Math.max(sig.aspect, 0.1);
   const ox = center[0] - width / 2, oy = center[1] - height / 2;
   const strokes = sig.strokes.map((s) => s.map((p): Point => [ox + p[0] * width, oy + p[1] * height]));
-  return createInk(doc, page, strokes, { color, width: Math.max(1.5, width / 70), fontSize: 12 }, "Firma");
+  return createInk(doc, page, strokes, { color, width: signatureStrokeWidth(width), fontSize: 12 }, "Firma", SIGNATURE_LABEL);
+}
+
+/** Firma da immagine: un timbro con lo sfondo trasparente, che si sposta e si ridimensiona come le altre forme. */
+export function createSignatureImage(doc: PlicoDoc, page: number, png: Uint8Array, aspect: number, center: Point, width: number): number {
+  const height = width / Math.max(aspect, 0.1);
+  return doc.run("Firma", () => {
+    const a = doc.page(page).createAnnotation("Stamp");
+    a.setStampImage(new mupdf.Image(png));
+    a.setRect([center[0] - width / 2, center[1] - height / 2, center[0] + width / 2, center[1] + height / 2]);
+    a.setContents(SIGNATURE_LABEL);
+    a.update();
+    return objId(a);
+  });
 }
 
 /** Misura il testo (Helvetica) per dimensionare la casella di un testo libero. */
@@ -344,6 +366,7 @@ export function resizeAnnotation(doc: PlicoDoc, page: number, id: number, next: 
       const [nx0, ny0, nx1, ny1] = [next[0] + (mx0 - bx0), next[1] + (my0 - by0), next[2] - (bx1 - mx1), next[3] - (by1 - my1)];
       const sx = Math.max(nx1 - nx0, 1) / Math.max(mx1 - mx0, 1e-3), sy = Math.max(ny1 - ny0, 1) / Math.max(my1 - my0, 1e-3);
       a.setInkList(strokes.map((s) => s.map((p): Point => [nx0 + (p[0] - mx0) * sx, ny0 + (p[1] - my0) * sy])));
+      if (a.getContents() === SIGNATURE_LABEL) a.setBorderWidth(Math.max(0.8, a.getBorderWidth() * Math.sqrt(sx * sy)));
     } else {
       a.setRect(next);
     }

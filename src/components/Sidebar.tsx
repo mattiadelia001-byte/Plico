@@ -196,7 +196,7 @@ function OutlineList({ items, depth }: { items: OutlineEntry[]; depth: number })
 
 const KIND: Record<string, string> = {
   Highlight: "Evidenziazione", Underline: "Sottolineatura", StrikeOut: "Testo barrato", Squiggly: "Ondulata",
-  Square: "Rettangolo", Circle: "Ovale", Line: "Linea", Ink: "Disegno", FreeText: "Testo", Text: "Nota",
+  Square: "Rettangolo", Circle: "Ovale", Line: "Linea", Ink: "Disegno", FreeText: "Testo", Text: "Nota", Stamp: "Firma",
 };
 
 function AnnotList({ doc }: { doc: PlicoDoc }) {
@@ -215,8 +215,8 @@ function AnnotList({ doc }: { doc: PlicoDoc }) {
           }}>
             <span className="dot" style={{ background: a.color }} />
             <span className="grow">
-              <strong>{KIND[a.type] ?? a.type}</strong>
-              {a.contents && <small>{a.contents}</small>}
+              <strong>{A.keepsAspect(a) ? "Firma" : KIND[a.type] ?? a.type}</strong>
+              {a.contents && !A.keepsAspect(a) && <small>{a.contents}</small>}
             </span>
             <small>p. {a.page + 1}</small>
           </button>

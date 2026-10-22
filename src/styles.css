@@ -211,6 +211,14 @@ button.primary:active:not(:disabled) { filter: brightness(0.92); }
 .facts { display: grid; grid-template-columns: 90px 1fr; gap: 3px 10px; margin: 6px 0 0; color: var(--muted); }
 .facts dd { margin: 0; color: var(--text); }
 progress { width: 100%; height: 8px; }
+.sig-tabs { margin: 0 0 2px; }
+.sig-tabs button { padding: 5px 0; }
+.sig-preview { height: 200px; border: 1px dashed var(--border); border-radius: 10px; background: #fff; display: grid; place-items: center; text-align: center; padding: 10px; color: #6e6e73; cursor: pointer; overflow: hidden; }
+.sig-preview img { max-width: 100%; max-height: 180px; object-fit: contain; }
+.sig-sens { margin-left: 0; font-size: 13px; }
+.sig-sens input { flex: 1; width: auto; }
+.sig-thumb-box { display: inline-grid; place-items: center; background: #fff; border-radius: 5px; border: 1px solid var(--border); flex: none; }
+.sig-thumb-box img { object-fit: contain; display: block; }
 .sig-canvas { background: var(--panel-2); border: 1px solid var(--border); border-radius: 10px; touch-action: none; cursor: crosshair; align-self: center; }
 .dropzone { border: 1.5px dashed var(--border); border-radius: 12px; min-height: 190px; padding: 6px; display: flex; flex-direction: column; }
 .dropzone.over { border-color: var(--accent); background: var(--accent-soft); }

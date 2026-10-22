@@ -3,6 +3,7 @@ import {
   Pencil, PenLine, Crop, Trash2, X, ChevronDown,
 } from "lucide-react";
 import { useRef, type ReactNode } from "react";
+import { SignatureThumb } from "./SignatureThumb";
 import { activeDoc, saveSignatures, useStore, type ToolId } from "../state/store";
 import * as act from "../state/actions";
 import * as A from "../engine/annotations";
@@ -121,12 +122,12 @@ export function MarkupBar() {
       {s.tool === "signature" && (
         <Menu
           testId="menu-signature"
-          label={<span className="sig-label">{sig ? "Firma salvata" : "Firma"} <ChevronDown size={13} /></span>}
+          label={<span className="sig-label">{sig ? <SignatureThumb sig={sig} width={64} height={24} /> : "Firma"} <ChevronDown size={13} /></span>}
           items={[
-            ...s.signatures.map((x, i) => ({ label: `Firma ${i + 1}`, checked: x.id === sig?.id, onClick: () => s.patch({ signatureId: x.id }) })),
+            ...s.signatures.map((x, i) => ({ label: "", icon: <SignatureThumb sig={x} />, checked: x.id === sig?.id, testId: `sig-item-${i}`, onClick: () => s.patch({ signatureId: x.id }) })),
             ...(s.signatures.length ? [{ separator: true } as const] : []),
             { label: "Nuova firma…", onClick: () => s.patch({ dialog: "signature" }) },
-            ...(sig ? [{ label: "Elimina la firma selezionata", onClick: () => { const rest = s.signatures.filter((x) => x.id !== sig.id); saveSignatures(rest, rest.slice(-1)[0]?.id ?? null); } }] : []),
+            ...(sig ? [{ label: "Elimina la firma scelta", onClick: () => { const rest = s.signatures.filter((x) => x.id !== sig.id); saveSignatures(rest, rest.slice(-1)[0]?.id ?? null); } }] : []),
           ]}
         />
       )}

@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp, FilePlus2, Trash2 } from "lucide-react";
 import { PlicoDoc, uid } from "../engine/plicoDoc";
 import * as T from "../engine/tools";
 import type { Signature } from "../engine/annotations";
+import { signatureFromImage, signatureFromStrokes } from "../engine/signature";
 import * as platform from "../platform";
 import { activeDoc, saveSignatures, toast, useStore } from "../state/store";
 import * as act from "../state/actions";
@@ -231,49 +232,82 @@ function ImagesDialog({ doc, onClose }: { doc: PlicoDoc; onClose: () => void }) 
 
 // ---------- Firma ----------
 
+const SIG_W = 520, SIG_H = 200;
+
 function SignatureDialog({ onClose }: { onClose: () => void }) {
+  const [mode, setMode] = useState<"draw" | "image">("draw");
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const strokes = useRef<[number, number][][]>([]);
   const cur = useRef<[number, number][] | null>(null);
   const [count, setCount] = useState(0);
+  const [imgSig, setImgSig] = useState<Signature | null>(null);
+  const [source, setSource] = useState<HTMLImageElement | null>(null);
+  const [sens, setSens] = useState(50);
+  const [imgError, setImgError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const redraw = () => {
-    const c = canvasRef.current!;
+    const c = canvasRef.current;
+    if (!c) return;
     const ctx = c.getContext("2d")!;
     const dpr = window.devicePixelRatio || 1;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, c.width, c.height);
-    ctx.strokeStyle = "rgba(128,128,128,.45)";
-    ctx.setLineDash([5, 5]); ctx.beginPath(); ctx.moveTo(16, 150); ctx.lineTo(424, 150); ctx.stroke(); ctx.setLineDash([]);
+    ctx.clearRect(0, 0, SIG_W, SIG_H);
+    // riga su cui appoggiare la firma
+    ctx.strokeStyle = "rgba(128,128,128,.4)"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(20, SIG_H - 52); ctx.lineTo(SIG_W - 20, SIG_H - 52); ctx.stroke();
     ctx.strokeStyle = getComputedStyle(document.body).color;
     ctx.lineWidth = 2.6; ctx.lineCap = "round"; ctx.lineJoin = "round";
-    for (const s of [...strokes.current, ...(cur.current ? [cur.current] : [])]) {
+    for (const st of [...strokes.current, ...(cur.current ? [cur.current] : [])]) {
       ctx.beginPath();
-      s.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-      if (s.length === 1) ctx.lineTo(s[0][0] + 0.1, s[0][1]);
+      if (st.length === 1) { ctx.moveTo(st[0][0], st[0][1]); ctx.lineTo(st[0][0] + 0.1, st[0][1]); }
+      else {
+        // curva morbida passando per i punti medi, così il tratto non è spezzettato
+        ctx.moveTo(st[0][0], st[0][1]);
+        for (let i = 1; i < st.length - 1; i++) {
+          ctx.quadraticCurveTo(st[i][0], st[i][1], (st[i][0] + st[i + 1][0]) / 2, (st[i][1] + st[i + 1][1]) / 2);
+        }
+        ctx.lineTo(st[st.length - 1][0], st[st.length - 1][1]);
+      }
       ctx.stroke();
     }
   };
 
   useEffect(() => {
-    const c = canvasRef.current!;
+    const c = canvasRef.current;
+    if (!c) return;
     const dpr = window.devicePixelRatio || 1;
-    c.width = 440 * dpr; c.height = 180 * dpr;
+    c.width = SIG_W * dpr; c.height = SIG_H * dpr;
     redraw();
-  }, []);
+  }, [mode]);
 
-  const pos = (e: React.PointerEvent): [number, number] => {
+  const pos = (e: { clientX: number; clientY: number }): [number, number] => {
     const r = canvasRef.current!.getBoundingClientRect();
     return [e.clientX - r.left, e.clientY - r.top];
   };
 
+  // dalla foto: ricalcolo la firma quando cambia l'immagine o la sensibilità
+  useEffect(() => {
+    if (!source) { setImgSig(null); return; }
+    const sig = signatureFromImage(source, sens);
+    setImgSig(sig);
+    setImgError(sig ? "" : "Non trovo nessuna firma in questa immagine. Prova con una foto più nitida o alza la sensibilità.");
+  }, [source, sens]);
+
+  const loadFile = (file: File | undefined) => {
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => { setSource(img); URL.revokeObjectURL(url); };
+    img.onerror = () => { setImgError("Non riesco ad aprire questa immagine."); URL.revokeObjectURL(url); };
+    img.src = url;
+  };
+
+  const ready = mode === "draw" ? count > 0 : !!imgSig;
+
   const save = () => {
-    const all = strokes.current.flat();
-    if (all.length < 3) return;
-    const xs = all.map((p) => p[0]), ys = all.map((p) => p[1]);
-    const [x0, y0, x1, y1] = [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
-    const w = Math.max(x1 - x0, 1), h = Math.max(y1 - y0, 1);
-    const sig: Signature = { id: uid(), aspect: w / h, strokes: strokes.current.map((s) => s.map(([x, y]) => [(x - x0) / w, (y - y0) / h] as [number, number])) };
+    const sig = mode === "draw" ? signatureFromStrokes(strokes.current) : imgSig;
+    if (!sig) return;
     const st = useStore.getState();
     saveSignatures([...st.signatures, sig], sig.id);
     st.setTool("signature");
@@ -281,17 +315,51 @@ function SignatureDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <Modal title="Disegna la tua firma" onClose={onClose} width={480}>
-      <p className="muted">Tieni premuto e disegna con il mouse, il trackpad o un tablet.</p>
-      <canvas ref={canvasRef} className="sig-canvas" style={{ width: 440, height: 180 }} data-testid="sig-canvas"
-        onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); cur.current = [pos(e)]; redraw(); }}
-        onPointerMove={(e) => { if (cur.current) { cur.current.push(pos(e)); redraw(); } }}
-        onPointerUp={() => { if (cur.current) { strokes.current.push(cur.current); cur.current = null; setCount(strokes.current.length); redraw(); } }} />
+    <Modal title="Crea la tua firma" onClose={onClose} width={560}>
+      <div className="seg sig-tabs">
+        <button className={mode === "draw" ? "on" : ""} onClick={() => setMode("draw")} data-testid="sig-tab-draw">Disegna</button>
+        <button className={mode === "image" ? "on" : ""} onClick={() => setMode("image")} data-testid="sig-tab-image">Da un'immagine</button>
+      </div>
+      {mode === "draw" ? (
+        <>
+          <p className="muted">Firma qui sotto con il trackpad, il mouse o un tablet.</p>
+          <canvas ref={canvasRef} className="sig-canvas" style={{ width: SIG_W, height: SIG_H }} data-testid="sig-canvas"
+            onPointerDown={(e) => { (e.target as HTMLElement).setPointerCapture(e.pointerId); cur.current = [pos(e)]; redraw(); }}
+            onPointerMove={(e) => {
+              if (!cur.current) return;
+              const events = (e.nativeEvent as PointerEvent).getCoalescedEvents?.() ?? [];
+              for (const ev of events.length ? events : [e.nativeEvent]) cur.current.push(pos(ev));
+              redraw();
+            }}
+            onPointerUp={() => { if (cur.current) { strokes.current.push(cur.current); cur.current = null; setCount(strokes.current.length); redraw(); } }}
+            onPointerCancel={() => { cur.current = null; redraw(); }} />
+        </>
+      ) : (
+        <>
+          <p className="muted">Scegli una foto o una scansione di una tua firma su carta bianca: tolgo io lo sfondo.</p>
+          <input ref={fileRef} type="file" accept="image/*" hidden data-testid="sig-file" onChange={(e) => { loadFile(e.target.files?.[0]); e.target.value = ""; }} />
+          <div className="sig-preview" data-testid="sig-image-preview"
+            onClick={() => { if (!source) fileRef.current?.click(); }}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => { e.preventDefault(); loadFile(e.dataTransfer.files?.[0]); }}>
+            {imgSig?.image ? <img src={imgSig.image} alt="Anteprima della firma" /> : <span>{imgError || "Clicca per scegliere un'immagine, o trascinala qui"}</span>}
+          </div>
+          {source && (
+            <label className="slider sig-sens">
+              <span>Sensibilità</span>
+              <input type="range" min={0} max={100} value={sens} onChange={(e) => setSens(+e.target.value)} data-testid="sig-sens" />
+              <button onClick={() => fileRef.current?.click()}>Cambia immagine…</button>
+            </label>
+          )}
+          {!source && <div><button onClick={() => fileRef.current?.click()} data-testid="sig-choose">Scegli immagine…</button></div>}
+          {source && imgError && <p className="error">{imgError}</p>}
+        </>
+      )}
       <Footer>
-        <button onClick={() => { strokes.current = []; cur.current = null; setCount(0); redraw(); }} disabled={!count}>Cancella</button>
+        {mode === "draw" && <button onClick={() => { strokes.current = []; cur.current = null; setCount(0); redraw(); }} disabled={!count}>Cancella</button>}
         <span className="grow" />
         <button onClick={onClose}>Annulla</button>
-        <button className="primary" disabled={!count} onClick={save} data-testid="sig-save">Salva firma</button>
+        <button className="primary" disabled={!ready} onClick={save} data-testid="sig-save">Salva firma</button>
       </Footer>
     </Modal>
   );
